@@ -1,0 +1,20 @@
+{
+  "name": "proyectomuigback",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "express": "^4.21.2",
+    "http-errors": "~1.6.3",
+    "jade": "^0.29.0",
+    "morgan": "~1.9.1"
+  },
+  "keywords": ["backend","MUIGUPTC","CRUD","BD"],
+  "author": "Pedro Alonso Pulido Hernández",
+  "license": "ISC",
+  "description": "Proyecto encargado para el desarrollo del backend para la gestión de un CRUD de los datos del inventario del Museo Universitario de Ingeniería Geológica. UPTC Sogamoso"
+}
