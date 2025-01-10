@@ -7,7 +7,7 @@ const bcrypt = require('bcrypt');
 router.get('/', async (req, res) => {
     try {
         const [rows] = await db.query('SELECT * FROM login');
-        res.json(rows);
+        res.status(200).json(rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener los usuarios' });
     }
@@ -26,7 +26,6 @@ router.post('/', async (req, res) => {
             'INSERT INTO login (user, password) VALUES (?,?)',
             [user, hashedPassword]
         );
-        console.log(result)
         res.status(201).json({ message: 'El usuario fue registrado con exito' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
@@ -53,7 +52,7 @@ router.put('/:userParam', async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
         }
-        res.json({ message: 'El usuario fue actualizado con exito' });
+        res.status(200).json({ message: 'El usuario fue actualizado con exito' });
     } catch (error) {
         res.status(500).json({ error: 'Error al actualizar los datos del usuario' });
     }
@@ -70,7 +69,7 @@ router.delete('/:userParam', async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'El usuario no fue encontrado' });
         }
-        res.json({ message: 'El usuario fue eliminado correctamente' });
+        res.status(200).json({ message: 'El usuario fue eliminado correctamente' });
     } catch (error) {
         res.status(500).json({ error: 'Error al eliminar el usuario' });
     }
@@ -95,7 +94,7 @@ router.post('/auth', async (req, res) => {
             return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
 
-        res.json({ message: 'Autenticacion exitosa', user: userData.user });
+        res.status(200).json({ message: 'Autenticacion exitosa', user: userData.user });
     } catch (error) {
         res.status(500).json({ error: 'Error al autenticar el usuario' });
     }
