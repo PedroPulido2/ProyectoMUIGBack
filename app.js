@@ -9,6 +9,7 @@ const loginRouter = require('./routes/login');
 const fosilRouter = require('./routes/fosil');
 const investigacionRouter = require('./routes/investigacion');
 const mineralRouter = require('./routes/mineral');
+const rocaRouter = require('./routes/roca');
 
 var app = express();
 
@@ -27,6 +28,7 @@ app.use('/login',loginRouter);
 app.use('/fosil',fosilRouter);
 app.use('/investigacion',investigacionRouter);
 app.use('/mineral',mineralRouter);
+app.use('/roca',rocaRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
