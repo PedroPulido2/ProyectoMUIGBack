@@ -85,9 +85,6 @@ router.post('/', upload.single('FILE'), async (req, res) => {
         );
         res.status(201).json({ message: 'Datos del fosil registrados correctamente' });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'El id_fosil ya esta en uso, ingrese uno diferente' });
-        }
         console.log(error);
         res.status(500).json({ error: 'Error al insertar los datos del fosil' });
     }

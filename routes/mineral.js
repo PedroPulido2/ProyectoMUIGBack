@@ -81,9 +81,6 @@ router.post('/', upload.single('FILE'), async (req, res) => {
         );
         res.status(201).json({ message: 'Datos del mineral registrados correctamente' });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'El id_mineral ya esta en uso, ingrese uno diferente' });
-        }
         res.status(500).json({ error: 'Error al insertar los datos del mineral' });
     }
 });
