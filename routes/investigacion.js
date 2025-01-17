@@ -33,13 +33,24 @@ router.get('/:ID_PIEZA', async (req, res) => {
 });
 
 //Crear una nueva investigacion
-router.post('/', upload.single('FILE'),async (req, res) => {
-    const { ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO, 
+router.post('/', upload.single('FILE'), async (req, res) => {
+    const { ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO,
         ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES } = req.body;
 
     var FOTO = '';
 
     try {
+        // Verificar si el ID ya existe en la base de datos
+        const [existing] = await db.query(
+            'SELECT 1 FROM investigacion WHERE ID_PIEZA = ?',
+            [ID_PIEZA]
+        );
+
+        // Si ya existe, devolver un error sin subir la imagen
+        if (existing.length > 0) {
+            return res.status(400).json({ error: 'El id_pieza ya esta en uso, ingrese uno diferente' });
+        }
+
         //Subir imagen a Google Drive
         if (req.file) {
             const filePath = req.file.path;
@@ -64,7 +75,7 @@ router.post('/', upload.single('FILE'),async (req, res) => {
 
         const [result] = await db.query(
             'INSERT INTO investigacion (ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO, ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, FOTO) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            [ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO, 
+            [ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO,
                 ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, FOTO
             ]
         );
@@ -78,9 +89,9 @@ router.post('/', upload.single('FILE'),async (req, res) => {
 });
 
 //Actulizar los datos de la investigacion
-router.put('/:ID_PIEZAPARAM',upload.single('FILE'), async (req, res) => {
+router.put('/:ID_PIEZAPARAM', upload.single('FILE'), async (req, res) => {
     const { ID_PIEZAPARAM } = req.params;
-    const { ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO, 
+    const { ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO,
         ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES } = req.body;
 
     var FOTO = '';
@@ -125,7 +136,7 @@ router.put('/:ID_PIEZAPARAM',upload.single('FILE'), async (req, res) => {
 
         const [result] = await db.query(
             'UPDATE investigacion SET ID_PIEZA = ?, COLECCION = ?, REPOSITORIO = ?, FILO = ?, SUBFILO = ?, CLASE = ?, ORDEN = ?, FAMILIA = ?, GENERO = ?, NOMBRE = ?, PERIODO_GEOLOGICO = ?, ERA_GEOLOGICA = ?, FORMACION_GEOLOGICA = ?, SECCION_ESTRATIGRAFICA = ?, COLECTOR = ?, LOCALIDAD = ?, OBSERVACIONES = ?, FOTO = ? WHERE ID_PIEZA = ?',
-            [ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO, 
+            [ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO,
                 ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, FOTO, ID_PIEZAPARAM]
         );
         if (result.affectedRows === 0) {
@@ -138,8 +149,8 @@ router.put('/:ID_PIEZAPARAM',upload.single('FILE'), async (req, res) => {
 });
 
 //Eliminar una pieza
-router.delete('/:ID_PIEZA',async (req,res)=>{
-    const {ID_PIEZA} = req.params;
+router.delete('/:ID_PIEZA', async (req, res) => {
+    const { ID_PIEZA } = req.params;
 
     try {
         //Obtener la imagen actual desde la BD
@@ -157,11 +168,11 @@ router.delete('/:ID_PIEZA',async (req,res)=>{
         }
 
         //Consulta para borrar los demas datos
-        const [result] = await db.query('DELETE FROM investigacion WHERE ID_PIEZA = ?',[ID_PIEZA]);
-        if (result.affectedRows === 0){
-            return res.status(404).json({error: `El ID de la pieza: ${ID_PIEZA} no fue encontrado`});
+        const [result] = await db.query('DELETE FROM investigacion WHERE ID_PIEZA = ?', [ID_PIEZA]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: `El ID de la pieza: ${ID_PIEZA} no fue encontrado` });
         }
-        res.status(200).json({message: `Los datos de la pieza fueron eliminados correctamente`});
+        res.status(200).json({ message: `Los datos de la pieza fueron eliminados correctamente` });
     } catch (error) {
         res.status(500).json({ error: 'Error al eliminar los datos de la investigacion' });
     }

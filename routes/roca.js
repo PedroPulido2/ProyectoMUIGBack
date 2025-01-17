@@ -35,12 +35,23 @@ router.get('/:ID_ROCA', async (req, res) => {
 
 //Crear una nueva roca
 router.post('/', upload.single('FILE'), async (req, res) => {
-    const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO, 
+    const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
         MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION } = req.body;
 
-        var FOTO = '';
+    var FOTO = '';
 
     try {
+        // Verificar si el ID ya existe en la base de datos
+        const [existing] = await db.query(
+            'SELECT 1 FROM roca WHERE ID_ROCA = ?',
+            [ID_ROCA]
+        );
+
+        // Si ya existe, devolver un error sin subir la imagen
+        if (existing.length > 0) {
+            return res.status(400).json({ error: 'El id_roca ya esta en uso, ingrese uno diferente' });
+        }
+
         //Subir imagen a Google Drive
         if (req.file) {
             const filePath = req.file.path;
@@ -62,26 +73,22 @@ router.post('/', upload.single('FILE'), async (req, res) => {
 
             FOTO = `https://lh3.googleusercontent.com/d/${response.data.id}`;
         }
-
         const [result] = await db.query(
             'INSERT INTO roca (ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO, MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, FOTO) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            [ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO, 
+            [ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
                 MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, FOTO
             ]
         );
         res.status(201).json({ message: 'Datos de la roca registrados correctamente' });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'El id_roca ya esta en uso, ingrese uno diferente' });
-        }
         res.status(500).json({ error: 'Error al insertar los datos de la roca' });
     }
 });
 
 //Actulizar los datos de la roca
-router.put('/:ID_ROCAPARAM', upload.single('FILE'),async (req, res) => {
+router.put('/:ID_ROCAPARAM', upload.single('FILE'), async (req, res) => {
     const { ID_ROCAPARAM } = req.params;
-    const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO, 
+    const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
         MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION } = req.body;
 
     var FOTO = '';
@@ -125,7 +132,7 @@ router.put('/:ID_ROCAPARAM', upload.single('FILE'),async (req, res) => {
         }
         const [result] = await db.query(
             'UPDATE roca SET ID_ROCA = ?, N_BARRANTES = ?, OTROS = ?, BD_C_VARGAS = ?, TIPO = ?, COLECCION = ?, NOMBRE_PIEZA = ?, DEPARTAMENTO = ?, MUNICIPIO = ?, COLECTOR_DONADOR = ?, CARACTERISTICAS = ?, OBSERVACIONES = ?, UBICACION = ?, FOTO = ? WHERE ID_ROCA = ?',
-            [ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO, 
+            [ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
                 MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, FOTO, ID_ROCAPARAM]
         );
         if (result.affectedRows === 0) {
@@ -138,8 +145,8 @@ router.put('/:ID_ROCAPARAM', upload.single('FILE'),async (req, res) => {
 });
 
 //Eliminar una roca
-router.delete('/:ID_ROCA',async (req,res)=>{
-    const {ID_ROCA} = req.params;
+router.delete('/:ID_ROCA', async (req, res) => {
+    const { ID_ROCA } = req.params;
 
     try {
         //Obtener la imagen actual desde la BD
@@ -157,11 +164,11 @@ router.delete('/:ID_ROCA',async (req,res)=>{
         }
 
         //Consulta para borrar los demas datos
-        const [result] = await db.query('DELETE FROM roca WHERE ID_ROCA = ?',[ID_ROCA]);
-        if (result.affectedRows === 0){
-            return res.status(404).json({error: `El ID de la roca: ${ID_ROCA} no fue encontrado`});
+        const [result] = await db.query('DELETE FROM roca WHERE ID_ROCA = ?', [ID_ROCA]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: `El ID de la roca: ${ID_ROCA} no fue encontrado` });
         }
-        res.status(200).json({message: `La roca fue eliminado correctamente`});
+        res.status(200).json({ message: `La roca fue eliminado correctamente` });
     } catch (error) {
         res.status(500).json({ error: 'Error al eliminar los datos de la roca' });
     }

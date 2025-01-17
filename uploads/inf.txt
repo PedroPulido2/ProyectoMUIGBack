@@ -1,0 +1,2 @@
+Este archivo solo es para que la carpeta pueda ser guardada en git.
+El principal proposito de esta carpeta es almacenar temporalmente las imagenes que se van a subir al Google Drive

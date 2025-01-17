@@ -42,6 +42,17 @@ router.post('/', upload.single('FILE'), async (req, res) => {
     var FOTO = '';
 
     try {
+        // Verificar si el ID ya existe en la base de datos
+        const [existing] = await db.query(
+            'SELECT 1 FROM fosil WHERE ID_FOSIL = ?',
+            [ID_FOSIL]
+        );
+
+        // Si ya existe, devolver un error sin subir la imagen
+        if (existing.length > 0) {
+            return res.status(400).json({ error: 'El id_fosil ya esta en uso, ingrese uno diferente' });
+        }
+
         //Subir imagen a Google Drive
         if (req.file) {
             const filePath = req.file.path;
