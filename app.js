@@ -5,11 +5,11 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
-const loginRouter = require('./routes/login');
-const fosilRouter = require('./routes/fosil');
-const investigacionRouter = require('./routes/investigacion');
-const mineralRouter = require('./routes/mineral');
-const rocaRouter = require('./routes/roca');
+const loginRouter = require('./routes/loginRoutes');
+const fosilRouter = require('./routes/fosilRoutes');
+const investigacionRouter = require('./routes/investigacionRoutes');
+const mineralRouter = require('./routes/mineralRoutes');
+const rocaRouter = require('./routes/rocaRoutes');
 
 var app = express();
 
