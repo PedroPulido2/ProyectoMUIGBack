@@ -6,34 +6,40 @@ const db = require('../config/bd');
  */
 
 const Login = {
-    async getAllUsers() {
+    async getAllLogins() {
         const [rows] = await db.query('SELECT * FROM login');
         return rows;
     },
 
-    async createUser(user, hashedPassword) {
-        const [result] = await db.query('INSERT INTO login (user, password) VALUES (?,?)',
-            [user, hashedPassword]
+    async createLogin(user, hashedPassword, idProfile) {
+        const [result] = await db.query('INSERT INTO login (user, password, id_Perfil) VALUES (?,?,?)',
+            [user, hashedPassword, idProfile]
         );
         return result;
     },
 
-    async updateUser(user, hashedPassword, userParam) {
-        const [result] = await db.query('UPDATE login SET user = ?, password = ? WHERE user = ?',
-            [user, hashedPassword, userParam]
+    async updateLogin(user, hashedPassword, id_Perfil, userParam) {
+        const [result] = await db.query('UPDATE login SET user = ?, password = ?, id_Perfil = ? WHERE user = ?',
+            [user, hashedPassword, id_Perfil, userParam]
         );
         return result;
     },
 
-    async deleteUser(user) {
+    async deleteLogin(user) {
         const [result] = await db.query('DELETE FROM login WHERE user = ?', [user]);
         return result;
     },
 
-    async getUserById(user) {
+    async getLoginByUser(user) {
         const [row] = await db.query('SELECT * FROM login WHERE user = ?', [user]);
         return row;
+    },
+
+    async getLoginByIdPerfil(id_Perfil){
+        const [row] = await db.query('SELECT * FROM login WHERE id_Perfil = ?',[id_Perfil]);
+        return row;
     }
+
 };
 
 module.exports = Login;
