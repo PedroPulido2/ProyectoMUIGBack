@@ -87,8 +87,6 @@ const actualizarFosil = async (req, res) => {
 
         //Subir imagen a Google Drive si se proporciona un archivo
         if (req.file) {
-            const filePath = req.file.path;
-
             if (currentFileId) {
                 await driveServices.eliminarImagenDeDrive(currentFileId);
             }
@@ -97,7 +95,7 @@ const actualizarFosil = async (req, res) => {
             FOTO = currentFotoUrl; //Mantener la imagen actual si no se proporciona una nueva
 
             //Si se cambia el ID_FOSIL entonces el nombre del archivo relacionado tambien cambia
-            if (ID_FOSIL !== ID_FOSILPARAM) {
+            if (ID_FOSIL !== ID_FOSILPARAM && currentFileId) {
                 await driveServices.actualizarNombreImagenDrive(currentFileId, ID_FOSIL);
             }
         }

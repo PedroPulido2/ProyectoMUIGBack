@@ -106,7 +106,7 @@ const actualizarInformacion = async (req, res) => {
             FOTO = currentFotoUrl; //Mantener la imagen actual si no se proporciona una nueva
 
             //Si se cambia el ID_PIEZA entonces el nombre del archivo relacionado tambien cambia
-            if (ID_PIEZA !== ID_PIEZAPARAM) {
+            if (ID_PIEZA !== ID_PIEZAPARAM && currentFileId) {
                 await driveServices.actualizarNombreImagenDrive(currentFileId, ID_PIEZA);
             }
         }

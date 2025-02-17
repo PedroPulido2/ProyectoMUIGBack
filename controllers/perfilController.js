@@ -48,6 +48,12 @@ const createProfile = async (req, res) => {
             return res.status(400).json({ error: 'El numero de documento del perfil ya esta en uso, ingrese uno diferente' });
         }
 
+        //Se verifica si el user existe en la tabla login
+        const userExist = await Login.getLoginByUser(user);
+        if (userExist.length > 0) {
+            return res.status(400).json({ error: 'El nombre de usuario ya esta en uso' });
+        }
+
         //Subir imagen a Google Drive si se selecciono una imagen
         if (req.file) {
             foto = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
@@ -56,12 +62,6 @@ const createProfile = async (req, res) => {
             id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo,
             telefono, foto, isAdmin
         };
-
-        //Se verifica si el user existe en la tabla login
-        const userExist = await Login.getLoginByUser(user);
-        if (userExist.length > 0) {
-            return res.status(400).json({ error: 'El nombre de usuario ya esta en uso' });
-        }
 
         //llamo metodo para crear contraseña encriptada
         const hashedPassword = await generateHashedPassword(password);
