@@ -12,7 +12,7 @@ const Mineral = {
     },
 
     async obtenerMineralPorId(ID_MINERAL) {
-        const [row] = await db.query('SELECT * FROM mineral WHERE ID_MINERAL = ?', ID_MINERAL);
+        const [row] = await db.query('SELECT * FROM mineral WHERE ID_MINERAL = ?', [ID_MINERAL]);
         return row;
     },
 

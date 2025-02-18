@@ -12,7 +12,7 @@ const Roca = {
     },
 
     async obtenerRocaPorId(ID_ROCA) {
-        const [row] = await db.query('SELECT * FROM roca WHERE ID_ROCA = ?', ID_ROCA);
+        const [row] = await db.query('SELECT * FROM roca WHERE ID_ROCA = ?', [ID_ROCA]);
         return row;
     },
 

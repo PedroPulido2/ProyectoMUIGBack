@@ -11,7 +11,7 @@ const Fosil = {
     },
 
     async obtenerFosilPorId(ID_FOSIL) {
-        const [row] = await db.query('SELECT * FROM fosil WHERE ID_FOSIL = ?', ID_FOSIL);
+        const [row] = await db.query('SELECT * FROM fosil WHERE ID_FOSIL = ?', [ID_FOSIL]);
         return row;
     },
 

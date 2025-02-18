@@ -11,6 +11,7 @@ const fosilRouter = require('./routes/fosilRoutes');
 const investigacionRouter = require('./routes/investigacionRoutes');
 const mineralRouter = require('./routes/mineralRoutes');
 const rocaRouter = require('./routes/rocaRoutes');
+const perfilRouter = require('./routes/perfilRoute');
 
 var app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/fosil', fosilRouter);
 app.use('/api/investigacion', investigacionRouter);
 app.use('/api/mineral', mineralRouter);
 app.use('/api/roca', rocaRouter);
+app.use('/api/perfil', perfilRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

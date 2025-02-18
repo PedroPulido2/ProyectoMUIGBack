@@ -4,22 +4,24 @@ const bcrypt = require('bcrypt');
 /**
  * Controlador login
  * En este archivo se definen los controladores asociados al manejo del login, se controlan los errores y solicitudes.
+ * NOTA: Este es para fin de pruebas con postman, a partir de perfilController se hace tambien gestion para la tabla login con 
+ * funciones auxiliares para la contraseña. 
  */
 
-const getAllUsers = async (req, res) => {
+const getAllLogins = async (req, res) => {
     try {
-        const users = await Login.getAllUsers();
+        const users = await Login.getAllLogins();
         res.status(200).json(users);
     } catch (error) {
-        console.error('Error al obtener todos los usuarios:', error.message);
+        console.error('Error al obtener todos los credenciales de los usuarios:', error.message);
         res.status(500).json({ error: 'Error al obtener los usuarios' });
     }
 };
 
-const getUserById = async (req, res) => {
+const getLoginByUser = async (req, res) => {
     const { user } = req.params;
     try {
-        const result = await Login.getUserById(user);
+        const result = await Login.getLoginByUser(user);
         if (result.length === 0) {
             return res.status(404).json({ error: 'El usuario no se encuentra registrado' });
         }
@@ -31,8 +33,8 @@ const getUserById = async (req, res) => {
     }
 };
 
-const createNewUser = async (req, res) => {
-    const { user, password } = req.body;
+const createLogin = async (req, res) => {
+    const { user, password, id_Perfil } = req.body;
 
     // Validar que se envíen el usuario y la contraseña
     if (!user || !password) {
@@ -52,7 +54,7 @@ const createNewUser = async (req, res) => {
             throw new Error('No se pudo generar el hash de la contraseña');
         }
 
-        await Login.createUser(user, hashedPassword);
+        await Login.createLogin(user, hashedPassword, id_Perfil);
         res.status(201).json({ message: 'El usuario fue registrado con exito' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
@@ -63,16 +65,17 @@ const createNewUser = async (req, res) => {
     }
 };
 
-const updateUser = async (req, res) => {
+const updateLogin = async (req, res) => {
     const { userParam } = req.params;
-    const { user, password } = req.body;
+    const { user, password, id_Perfil } = req.body;
 
     try {
         //Cifrar contraseñas
         const salt = await bcrypt.genSalt(10); //genera un salt
         const hashedPassword = await bcrypt.hash(password, salt); //genera la constrasena cifrada
 
-        const result = await Login.updateUser(user, hashedPassword, userParam);
+        const result = await Login.updateLogin(user, hashedPassword, id_Perfil, userParam);
+
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
         }
@@ -83,10 +86,10 @@ const updateUser = async (req, res) => {
     }
 };
 
-const deleteUser = async (req, res) => {
+const deleteLogin = async (req, res) => {
     const { user } = req.params;
     try {
-        const result = await Login.deleteUser(user);
+        const result = await Login.deleteLogin(user);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'El usuario no fue encontrado' });
@@ -102,7 +105,7 @@ const authUser = async (req, res) => {
     const { user, password } = req.body;
 
     try {
-        const row = await Login.getUserById(user);
+        const row = await Login.getLoginByUser(user);
 
         if (row.length === 0) {
             return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
@@ -123,4 +126,4 @@ const authUser = async (req, res) => {
     }
 };
 
-module.exports = { getAllUsers, getUserById, createNewUser, updateUser, deleteUser, authUser }
+module.exports = { getAllLogins, getLoginByUser, createLogin, updateLogin, deleteLogin, authUser }

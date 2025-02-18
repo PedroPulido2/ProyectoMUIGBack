@@ -3,11 +3,11 @@ const router = express.Router();
 const loginController = require('../controllers/loginController');
 
 //Rutas del login
-router.get('/', loginController.getAllUsers);
-router.get('/:user', loginController.getUserById);
-router.post('/', loginController.createNewUser);
-router.put('/:userParam', loginController.updateUser);
-router.delete('/:user', loginController.deleteUser);
+router.get('/', loginController.getAllLogins);
+router.get('/:user', loginController.getLoginByUser);
+router.post('/', loginController.createLogin);
+router.put('/:userParam', loginController.updateLogin);
+router.delete('/:user', loginController.deleteLogin);
 router.post('/auth', loginController.authUser);
 
 module.exports = router;
