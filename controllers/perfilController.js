@@ -93,7 +93,6 @@ const updateProfile = async (req, res) => {
 
         const currentFotoUrl = urlFoto[0].foto || '';
         const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
-
         // Subir nueva imagen si se proporciona
         if (req.file) {
             if (currentFileId) {
@@ -194,6 +193,21 @@ const deleteImageProfile = async (req, res) => {
     }
 };
 
+const getImageandRolProfile = async (req, res) => {
+    try {
+        const { id_Perfil } = req.params;
+
+        const rol = await Perfil.getProfileById(id_Perfil);
+        const urlFoto = await Perfil.getImageProfile(id_Perfil);
+        const currentFotoUrl = urlFoto[0].foto;
+
+        res.status(200).json({ fotoProfile: currentFotoUrl, isAdmin: rol[0].isAdmin });
+    } catch (error) {
+        console.error('Error al obtener la foto del perfil:', error.message);
+        res.status(500).json({ error: 'Error al obtener la foto del perfil' });
+    }
+};
+
 const generateHashedPassword = async (password) => {
     // Generar un salt para cifrar la contraseña
     const salt = await bcrypt.genSalt(10);
@@ -209,4 +223,4 @@ const generateHashedPassword = async (password) => {
     return hashedPassword;
 };
 
-module.exports = { getAllProfiles, getProfileById, createProfile, updateProfile, deleteProfile, deleteImageProfile }
+module.exports = { getAllProfiles, getProfileById, createProfile, updateProfile, deleteProfile, deleteImageProfile, getImageandRolProfile }

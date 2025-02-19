@@ -119,7 +119,7 @@ const authUser = async (req, res) => {
             return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
 
-        res.status(200).json({ message: 'Autenticacion exitosa', user: userData.user });
+        res.status(200).json({ message: 'Autenticacion exitosa', user: userData.user, id_Perfil: userData.id_Perfil });
     } catch (error) {
         console.error('Error al autenticar el usuario:', error.message);
         res.status(500).json({ error: 'Error al autenticar el usuario' });
