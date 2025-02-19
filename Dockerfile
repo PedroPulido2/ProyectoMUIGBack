@@ -2,8 +2,7 @@ FROM node:18
 
 WORKDIR /app
 
-# Copia el archivo .env al contenedor
-COPY .env .env
+
 
 # Copia solo los archivos necesarios para instalar las dependencias
 COPY package*.json ./
