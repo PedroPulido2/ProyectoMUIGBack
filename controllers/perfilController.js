@@ -140,7 +140,7 @@ const deleteProfile = async (req, res) => {
         //Obtener la imagen actual desde la BD
         const urlFoto = await Perfil.getImageProfile(id_Perfil);
         const currentFotoUrl = urlFoto[0].foto;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
         if (urlFoto.length === 0) {
             return res.status(404).json({ error: `El numero de documento del perfil: ${id_Perfil} no fue encontrado u registrado` });
@@ -170,7 +170,7 @@ const deleteImageProfile = async (req, res) => {
         // Obtener la URL de la imagen actual del perfil desde la base de datos
         const urlFoto = await Perfil.getProfileById(id_Perfil);
         const currentFotoUrl = urlFoto[0].foto;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
         if (urlFoto.length === 0) {
             return res.status(404).json({ error: `El numero de documento del perfil: ${id_Perfil} no fue encontrado u registrado` });

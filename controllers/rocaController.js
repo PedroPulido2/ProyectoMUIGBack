@@ -77,7 +77,7 @@ const actualizarRoca = async (req, res) => {
         //Obtener la imagen actual desde la BD
         const urlFoto = await Roca.obtenerFotoRoca(ID_ROCAPARAM);
         const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
         if (urlFoto.length === 0) {
             return res.status(404).json({ error: `El ID de la roca: ${ID_ROCA} no fue encontrado` });
@@ -118,7 +118,7 @@ const eliminarRoca = async (req, res) => {
         //Obtener la imagen actual desde la BD
         const urlFoto = await Roca.obtenerFotoRoca(ID_ROCA);
         const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
         if (urlFoto.length === 0) {
             return res.status(404).json({ error: `El ID de la roca: ${ID_ROCA} no fue encontrado` });
@@ -144,7 +144,7 @@ const eliminarFotoRoca = async (req, res) => {
         // Obtener la URL de la imagen actual de la pieza desde la base de datos
         const urlFoto = await Roca.obtenerFotoRoca(ID_ROCA);
         const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
         if (urlFoto.length === 0) {
             return res.status(404).json({ error: `El ID de la roca: ${ID_ROCA} no fue encontrado` });

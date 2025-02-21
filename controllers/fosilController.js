@@ -79,9 +79,9 @@ const actualizarFosil = async (req, res) => {
         //Obtener la imagen actual desde la BD
         const urlFoto = await Fosil.obtenerFotoFosil(ID_FOSILPARAM);
         const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
-        if (urlFoto.length === 0) {
+        if (!urlFoto.length || !urlFoto[0].FOTO) {
             return res.status(404).json({ error: `El ID del fósil: ${ID_FOSILPARAM} no fue encontrado u registrado` });
         }
 
@@ -121,9 +121,9 @@ const borrarFosil = async (req, res) => {
         //Obtener la imagen actual desde la BD
         const urlFoto = await Fosil.obtenerFotoFosil(ID_FOSIL);
         const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
-        if (urlFoto.length === 0) {
+        if (!urlFoto.length || !urlFoto[0].FOTO) {
             return res.status(404).json({ error: `El ID del fósil: ${ID_FOSIL} no fue encontrado` });
         }
 
@@ -147,7 +147,7 @@ const borrarFotoFosil = async (req, res) => {
         // Obtener la URL de la imagen actual del fósil desde la base de datos
         const rows = await Fosil.obtenerFosilPorId(ID_FOSIL);
         const currentFotoUrl = rows[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
         if (rows.length === 0) {
             return res.status(404).json({ error: `El ID del fósil: ${ID_FOSIL} no fue encontrado` });

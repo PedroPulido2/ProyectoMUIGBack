@@ -84,7 +84,7 @@ const actualizarInformacion = async (req, res) => {
         //Obtener la imagen actual desde la BD
         const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZAPARAM);
         const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
         if (urlFoto.length === 0) {
             return res.status(404).json({ error: `El ID de la pieza: ${ID_PIEZAPARAM} no fue encontrado` });
@@ -131,7 +131,7 @@ const borrarInvestigacion = async (req, res) => {
         //Obtener la imagen actual desde la BD
         const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZA);
         const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
         if (urlFoto.length === 0) {
             return res.status(404).json({ error: `El ID de la pieza: ${ID_PIEZA} no fue encontrado` });
@@ -157,8 +157,7 @@ const borrarImagenInvestigacion = async (req, res) => {
         // Obtener la URL de la imagen actual de la pieza desde la base de datos
         const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZA);
         const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1];
-
+        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         if (urlFoto.length === 0) {
             return res.status(404).json({ error: `El ID de la pieza: ${ID_PIEZA} no fue encontrado` });
         }

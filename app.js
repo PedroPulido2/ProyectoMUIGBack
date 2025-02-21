@@ -12,6 +12,7 @@ const investigacionRouter = require('./routes/investigacionRoutes');
 const mineralRouter = require('./routes/mineralRoutes');
 const rocaRouter = require('./routes/rocaRoutes');
 const perfilRouter = require('./routes/perfilRoute');
+const imagenRouter = require('./routes/imagenRouter');
 
 var app = express();
 
@@ -41,6 +42,7 @@ app.use('/api/investigacion', investigacionRouter);
 app.use('/api/mineral', mineralRouter);
 app.use('/api/roca', rocaRouter);
 app.use('/api/perfil', perfilRouter);
+app.use('/api/imagen',imagenRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
