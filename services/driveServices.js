@@ -26,7 +26,7 @@ async function subirImagenADrive(file, idCarpetaDrive) {
 
         fs.unlinkSync(filePath); // Eliminar archivo temporal del servidor
 
-        return `https://lh3.googleusercontent.com/d/${response.data.id}`;
+        return `https://drive.google.com/file/d/${response.data.id}`;
     } catch (error) {
         console.error('Error al subir imagen a Google Drive:', error.message);
         throw new Error('Error al subir la imagen');
