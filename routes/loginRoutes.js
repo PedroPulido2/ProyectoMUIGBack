@@ -9,5 +9,6 @@ router.post('/', loginController.createLogin);
 router.put('/:userParam', loginController.updateLogin);
 router.delete('/:user', loginController.deleteLogin);
 router.post('/auth', loginController.authUser);
+router.post('/verify',loginController.verifyPassword);
 
 module.exports = router;

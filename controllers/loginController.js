@@ -1,5 +1,7 @@
+const { use } = require('bcrypt/promises');
 const Login = require('../models/loginModel');
 const bcrypt = require('bcrypt');
+const { is } = require('express/lib/request');
 
 /**
  * Controlador login
@@ -126,4 +128,30 @@ const authUser = async (req, res) => {
     }
 };
 
-module.exports = { getAllLogins, getLoginByUser, createLogin, updateLogin, deleteLogin, authUser }
+const verifyPassword = async (req, res) => {
+    const { user, password } = req.body;
+
+    try {
+        const row = await Login.getLoginByUser(user);
+
+        if (row.length === 0) {
+            return res.status(401).json({ error: 'Usuario no encontrado' });
+        }
+
+        const userData = row[0];
+
+        //verificacion de la contraseña
+        const isMatch = await bcrypt.compare(password, userData.password);
+
+        if (isMatch) {
+            return res.status(200).json({ validation: true });
+        } else {
+            return res.status(200).json({ validation: false });
+        }
+    } catch (error) {
+        console.error('Error al verificar la contraseña:', error.message);
+        res.status(500).json({ error: 'Error al verificar la contraseña' });
+    }
+};
+
+module.exports = { getAllLogins, getLoginByUser, createLogin, updateLogin, deleteLogin, authUser, verifyPassword }
