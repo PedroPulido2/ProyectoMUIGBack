@@ -7,7 +7,7 @@ const db = require('../config/bd');
 
 const Login = {
     async getAllLogins() {
-        const [rows] = await db.query('SELECT * FROM login');
+        const [rows] = await db.query('SELECT user, id_Perfil FROM login');
         return rows;
     },
 
@@ -31,13 +31,20 @@ const Login = {
     },
 
     async getLoginByUser(user) {
-        const [row] = await db.query('SELECT * FROM login WHERE user = ?', [user]);
+        const [row] = await db.query('SELECT login.id_Perfil, user , password, isAdmin, foto FROM login JOIN perfil WHERE user = ?', [user]);
         return row;
     },
 
     async getLoginByIdPerfil(id_Perfil){
         const [row] = await db.query('SELECT * FROM login WHERE id_Perfil = ?',[id_Perfil]);
         return row;
+    },
+
+    async changePassword(user, hashedPassword){
+        const [result] = await db.query('UPDATE login SET password = ? WHERE user = ?',
+            [hashedPassword, user]
+        );
+        return result;
     }
 
 };

@@ -1,7 +1,6 @@
-const { use } = require('bcrypt/promises');
 const Login = require('../models/loginModel');
 const bcrypt = require('bcrypt');
-const { is } = require('express/lib/request');
+const jwt = require('jsonwebtoken');
 
 /**
  * Controlador login
@@ -15,7 +14,7 @@ const getAllLogins = async (req, res) => {
         const users = await Login.getAllLogins();
         res.status(200).json(users);
     } catch (error) {
-        console.error('Error al obtener todos los credenciales de los usuarios:', error.message);
+        console.error('Error al obtener credenciales de los usuarios:', error.message);
         res.status(500).json({ error: 'Error al obtener los usuarios' });
     }
 };
@@ -121,7 +120,13 @@ const authUser = async (req, res) => {
             return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
 
-        res.status(200).json({ message: 'Autenticacion exitosa', user: userData.user, id_Perfil: userData.id_Perfil });
+        const token = jwt.sign(
+            { id_Perfil: userData.id_Perfil, user: userData.user, isAdmin: userData.isAdmin, foto: userData.foto },
+            process.env.SECRET_KEY,
+            { expiresIn: "1h" }
+        );
+
+        res.status(200).json({ message: 'Autenticacion exitosa', token });
     } catch (error) {
         console.error('Error al autenticar el usuario:', error.message);
         res.status(500).json({ error: 'Error al autenticar el usuario' });
@@ -129,13 +134,20 @@ const authUser = async (req, res) => {
 };
 
 const verifyPassword = async (req, res) => {
-    const { user, password } = req.body;
+    const authHeader = req.headers["authorization"];
+    if (!authHeader) return res.status(401).json({ error: "No autorizado" });
+
+    const token = authHeader.split(" ")[1];
 
     try {
-        const row = await Login.getLoginByUser(user);
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        const user = decoded.user;
 
+        const { password } = req.body; // La contraseña ya viene hasheada con SHA-256 desde el frontend
+
+        const row = await Login.getLoginByUser(user);
         if (row.length === 0) {
-            return res.status(401).json({ error: 'Usuario no encontrado' });
+            return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
         const userData = row[0];
@@ -143,15 +155,39 @@ const verifyPassword = async (req, res) => {
         //verificacion de la contraseña
         const isMatch = await bcrypt.compare(password, userData.password);
 
-        if (isMatch) {
-            return res.status(200).json({ validation: true });
-        } else {
-            return res.status(200).json({ validation: false });
+        if (!isMatch) {
+            return res.status(200).json({ valid: false });
         }
+
+        res.status(200).json({ valid: true });
     } catch (error) {
         console.error('Error al verificar la contraseña:', error.message);
         res.status(500).json({ error: 'Error al verificar la contraseña' });
     }
 };
 
-module.exports = { getAllLogins, getLoginByUser, createLogin, updateLogin, deleteLogin, authUser, verifyPassword }
+const updatePassword = async (req, res) => {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader) return res.status(401).json({ error: "No autorizado" });
+    
+    const { user } = req.params;
+    const { password } = req.body;
+
+    try {
+        //Cifrar contraseñas
+        const salt = await bcrypt.genSalt(10); //genera un salt
+        const hashedPassword = await bcrypt.hash(password, salt); //genera la constrasena cifrada
+
+        const result = await Login.changePassword(user, hashedPassword);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
+        }
+        res.status(200).json({ message: 'Contraseña actualizada con exito' });
+    } catch (error) {
+        console.error('Error al actualizar la contraseña:', error.message);
+        res.status(500).json({ error: 'Error al actualizar la contraseña' });
+    }
+};
+
+module.exports = { getAllLogins, getLoginByUser, createLogin, updateLogin, deleteLogin, authUser, verifyPassword, updatePassword }
