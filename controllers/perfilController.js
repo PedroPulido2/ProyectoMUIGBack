@@ -107,26 +107,28 @@ const updateProfile = async (req, res) => {
         }
 
         // Verificar si el usuario ya existe en la tabla login
-        const userExist = await Login.getLoginByUser(user);
-        if (userExist.length > 0 && userExist[0].user !== user) {
-            return res.status(400).json({ error: 'El nombre de usuario ya está en uso' });
+        const userExist = await Login.getLoginByIdPerfil(id_PerfilPARAM);
+
+        if (userExist[0].user !== user && user) {
+            await Login.updateUser(user, id_Perfil);
         }
 
-        // Encriptar contraseña solo si se proporciona
-        const hashedPassword = password ? await generateHashedPassword(password) : null;
+        if (password && password.trim() !== '') {
+            const hashedPassword = await generateHashedPassword(password);
+            await Login.updatePassword(user, hashedPassword);
+        }        
 
         // Datos del perfil a actualizar
         const perfilData = { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, foto, isAdmin };
 
-        // Actualizar datos en la BD
-        if (hashedPassword) {
-            await Login.updateLogin(user, hashedPassword, id_Perfil);
-        }
         await Perfil.updateProfile(id_PerfilPARAM, perfilData);
 
-        res.status(201).json({ message: 'Datos del perfil fueron actualizados correctamente' });
+        res.status(200).json({ message: 'Datos del perfil fueron actualizados correctamente' });
 
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ error: `El usuario ya está en uso` });
+        }
         console.error('Error al actualizar el perfil:', error.message);
         res.status(500).json({ error: 'Error al actualizar los datos del perfil' });
     }
@@ -210,6 +212,8 @@ const getImageandRolProfile = async (req, res) => {
 
 const generateHashedPassword = async (password) => {
     // Generar un salt para cifrar la contraseña
+    if (!password) throw new Error("La contraseña no puede estar vacía");
+
     const salt = await bcrypt.genSalt(10);
     if (!salt) {
         throw new Error('No se pudo generar el salt para cifrar la contraseña');

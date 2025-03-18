@@ -18,9 +18,9 @@ const Login = {
         return result;
     },
 
-    async updateLogin(user, hashedPassword, id_Perfil, userParam) {
-        const [result] = await db.query('UPDATE login SET user = ?, password = ?, id_Perfil = ? WHERE user = ?',
-            [user, hashedPassword, id_Perfil, userParam]
+    async updateUser(user, id_Perfil) {
+        const [result] = await db.query('UPDATE login SET user = ? WHERE id_Perfil = ?',
+            [user, id_Perfil]
         );
         return result;
     },
@@ -31,7 +31,7 @@ const Login = {
     },
 
     async getLoginByUser(user) {
-        const [row] = await db.query('SELECT login.id_Perfil, user , password, isAdmin, foto FROM login JOIN perfil WHERE user = ?', [user]);
+        const [row] = await db.query('SELECT login.id_Perfil, user , password, isAdmin, foto FROM login INNER JOIN perfil USING (id_Perfil) WHERE user = ?', [user]);
         return row;
     },
 
@@ -40,7 +40,7 @@ const Login = {
         return row;
     },
 
-    async changePassword(user, hashedPassword){
+    async updatePassword(user, hashedPassword){
         const [result] = await db.query('UPDATE login SET password = ? WHERE user = ?',
             [hashedPassword, user]
         );

@@ -178,7 +178,7 @@ const updatePassword = async (req, res) => {
         const salt = await bcrypt.genSalt(10); //genera un salt
         const hashedPassword = await bcrypt.hash(password, salt); //genera la constrasena cifrada
 
-        const result = await Login.changePassword(user, hashedPassword);
+        const result = await Login.updatePassword(user, hashedPassword);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
