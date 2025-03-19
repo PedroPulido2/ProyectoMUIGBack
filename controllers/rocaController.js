@@ -50,7 +50,7 @@ const crearRoca = async (req, res) => {
 
         //Subir imagen a Google Drive
         if (req.file) {
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
+            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_ROCA);
         }
 
         const rocaData = {
@@ -74,13 +74,19 @@ const actualizarRoca = async (req, res) => {
         MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION } = req.body;
 
     try {
+        const roca = await Roca.obtenerRocaPorId(ID_ROCAPARAM);
         //Obtener la imagen actual desde la BD
         const urlFoto = await Roca.obtenerFotoRoca(ID_ROCAPARAM);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (urlFoto.length === 0) {
+        if (roca.length === 0) {
             return res.status(404).json({ error: `El ID de la roca: ${ID_ROCA} no fue encontrado` });
+        }
+
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         }
 
         //Subir imagen a Google Drive si se proporciona un archivo
@@ -88,13 +94,19 @@ const actualizarRoca = async (req, res) => {
             if (currentFileId) {
                 await driveServices.eliminarImagenDeDrive(currentFileId);
             }
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
+            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_ROCA);
         } else {
             FOTO = currentFotoUrl; //Mantener la imagen actual si no se proporciona una nueva
 
             //Si se cambia el ID_ROCA entonces el nombre del archivo relacionado tambien cambia
-            if (ID_ROCA !== ID_ROCAPARAM && currentFileId) {
-                await driveServices.actualizarNombreImagenDrive(currentFileId, ID_ROCA);
+            if (ID_ROCA !== ID_ROCAPARAM) {
+                const rocaExistente = await Roca.obtenerRocaPorId(ID_ROCA);
+                if (rocaExistente.length > 0) {
+                    return res.status(400).json({ error: `El ID_ROCA: ${ID_ROCA} ya está en uso` });
+                }
+                if (currentFileId) {
+                    await driveServices.actualizarNombreImagenDrive(currentFileId, ID_ROCA);
+                }
             }
         }
 
@@ -115,13 +127,19 @@ const eliminarRoca = async (req, res) => {
     const { ID_ROCA } = req.params;
 
     try {
+        //Verificar si la roca existe en la base de datos
+        const roca = await Roca.obtenerRocaPorId(ID_ROCA);
+        if (!roca || roca.length === 0) {
+            return res.status(404).json({ error: `El ID de la roca ${ID_ROCA} no fue encontrado.` });
+        }
         //Obtener la imagen actual desde la BD
         const urlFoto = await Roca.obtenerFotoRoca(ID_ROCA);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (urlFoto.length === 0) {
-            return res.status(404).json({ error: `El ID de la roca: ${ID_ROCA} no fue encontrado` });
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         }
 
         // Eliminar la imagen de Google Drive
@@ -141,12 +159,18 @@ const eliminarFotoRoca = async (req, res) => {
     const { ID_ROCA } = req.params;
 
     try {
+        const roca = await Roca.obtenerRocaPorId(ID_ROCA);
         // Obtener la URL de la imagen actual de la pieza desde la base de datos
         const urlFoto = await Roca.obtenerFotoRoca(ID_ROCA);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (urlFoto.length === 0) {
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        }
+
+        if (roca.length === 0) {
             return res.status(404).json({ error: `El ID de la roca: ${ID_ROCA} no fue encontrado` });
         }
 

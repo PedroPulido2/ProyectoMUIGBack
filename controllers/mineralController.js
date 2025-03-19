@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const Fosil = require('../models/fosilModel');
 const Mineral = require('../models/mineralModel');
 const driveServices = require('../services/driveServices');
 const id_Carpeta_Drive = process.env.ID_CARPETA_DRIVE_MINERAL;
@@ -50,7 +51,7 @@ const crearMineral = async (req, res) => {
 
         //Subir imagen a Google Drive
         if (req.file) {
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
+            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_MINERAL);
         }
 
         const mineralData = {
@@ -74,13 +75,19 @@ const actualizarMineral = async (req, res) => {
         CARACTERISTICAS, COLECTOR, OBSERVACIONES, UBICACION } = req.body;
 
     try {
+        const mineral = await Mineral.obtenerMineralPorId(ID_MINERALPARAM);
         //Obtener la imagen actual desde la BD
         const urlFoto = await Mineral.obtenerFotoMineral(ID_MINERALPARAM);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (urlFoto.length === 0) {
+        if (mineral.length === 0) {
             return res.status(404).json({ error: `El ID del mineral: ${ID_MINERALPARAM} no fue encontrado` });
+        }
+
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         }
 
         //Subir imagen a Google Drive si se proporciona un archivo
@@ -90,13 +97,19 @@ const actualizarMineral = async (req, res) => {
             if (currentFileId) {
                 await driveServices.eliminarImagenDeDrive(currentFileId);
             }
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
+            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_MINERAL);
         } else {
             FOTO = currentFotoUrl; //Mantener la imagen actual si no se proporciona una nueva
 
             //Si se cambia el ID_MINERAL entonces el nombre del archivo relacionado tambien cambia
-            if (ID_MINERAL !== ID_MINERALPARAM && currentFileId) {
-                await driveServices.actualizarNombreImagenDrive(currentFileId, ID_MINERAL);
+            if (ID_MINERAL !== ID_MINERALPARAM) {
+                const mineralExistente = await Mineral.obtenerMineralPorId(ID_MINERAL);
+                if (mineralExistente.length > 0) {
+                    return res.status(400).json({ error: `El ID_MINERAL: ${ID_MINERAL} ya está en uso` });
+                }
+                if (currentFileId) {
+                    await driveServices.actualizarNombreImagenDrive(currentFileId, ID_MINERAL);
+                }
             }
         }
 
@@ -117,13 +130,19 @@ const borrarMineral = async (req, res) => {
     const { ID_MINERAL } = req.params;
 
     try {
+        //Verificar si el mineral existe en la base de datos
+        const mineral = await Mineral.obtenerMineralPorId(ID_MINERAL);
+        if (!mineral || mineral.length === 0) {
+            return res.status(404).json({ error: `El ID del mineral: ${ID_MINERAL} no fue encontrado.` });
+        }
         //Obtener la imagen actual desde la BD
         const urlFoto = await Mineral.obtenerFotoMineral(ID_MINERAL);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (urlFoto.length === 0) {
-            return res.status(404).json({ error: `El ID del mineral: ${ID_MINERAL} no fue encontrado` });
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         }
 
         // Eliminar la imagen de Google Drive
@@ -143,12 +162,18 @@ const borrarImagenMineral = async (req, res) => {
     const { ID_MINERAL } = req.params;
 
     try {
+        const mineral = await Mineral.obtenerMineralPorId(ID_MINERAL);
         // Obtener la URL de la imagen actual de la pieza desde la base de datos
         const urlFoto = await Mineral.obtenerFotoMineral(ID_MINERAL);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (urlFoto.length === 0) {
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        }
+
+        if (mineral.length === 0) {
             return res.status(404).json({ error: `El ID del mineral: ${ID_MINERAL} no fue encontrado` });
         }
 

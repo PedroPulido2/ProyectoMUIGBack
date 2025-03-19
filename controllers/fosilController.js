@@ -51,7 +51,7 @@ const crearFosil = async (req, res) => {
 
         //Subir imagen a Google Drive si se selecciono una imagen
         if (req.file) {
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
+            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_FOSIL);
         }
         const fosilData = {
             ID_FOSIL, N_BARRANTES, COLECCION, UBICACION, FILO, SUBFILO, CLASE, ORDEN,
@@ -76,13 +76,19 @@ const actualizarFosil = async (req, res) => {
         VITRINA, BANDEJA, OBSERVACIONES } = req.body;
 
     try {
+        const fosil = await Fosil.obtenerFosilPorId(ID_FOSILPARAM);
         //Obtener la imagen actual desde la BD
         const urlFoto = await Fosil.obtenerFotoFosil(ID_FOSILPARAM);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (!urlFoto.length || !urlFoto[0].FOTO) {
+        if (fosil.length === 0) {
             return res.status(404).json({ error: `El ID del fósil: ${ID_FOSILPARAM} no fue encontrado u registrado` });
+        }
+
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         }
 
         //Subir imagen a Google Drive si se proporciona un archivo
@@ -90,13 +96,19 @@ const actualizarFosil = async (req, res) => {
             if (currentFileId) {
                 await driveServices.eliminarImagenDeDrive(currentFileId);
             }
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
+            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_FOSIL);
         } else {
             FOTO = currentFotoUrl; //Mantener la imagen actual si no se proporciona una nueva
 
             //Si se cambia el ID_FOSIL entonces el nombre del archivo relacionado tambien cambia
-            if (ID_FOSIL !== ID_FOSILPARAM && currentFileId) {
-                await driveServices.actualizarNombreImagenDrive(currentFileId, ID_FOSIL);
+            if (ID_FOSIL !== ID_FOSILPARAM) {
+                const fosilExistente = await Fosil.obtenerFosilPorId(ID_FOSIL);
+                if (fosilExistente.length > 0) {
+                    return res.status(400).json({ error: `El ID_FOSIL: ${ID_FOSIL} ya está en uso` });
+                }
+                if (currentFileId) {
+                    await driveServices.actualizarNombreImagenDrive(currentFileId, ID_FOSIL);
+                }
             }
         }
 
@@ -118,13 +130,20 @@ const borrarFosil = async (req, res) => {
     const { ID_FOSIL } = req.params;
 
     try {
+        // Verificar si el fósil existe en la base de datos
+        const fosil = await Fosil.obtenerFosilPorId(ID_FOSIL);
+        if (!fosil || fosil.length === 0) {
+            return res.status(404).json({ error: `El ID del fósil ${ID_FOSIL} no fue encontrado.` });
+        }
+
         //Obtener la imagen actual desde la BD
         const urlFoto = await Fosil.obtenerFotoFosil(ID_FOSIL);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (!urlFoto.length || !urlFoto[0].FOTO) {
-            return res.status(404).json({ error: `El ID del fósil: ${ID_FOSIL} no fue encontrado` });
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         }
 
         // Eliminar la imagen de Google Drive
@@ -144,12 +163,18 @@ const borrarFotoFosil = async (req, res) => {
     const { ID_FOSIL } = req.params;
 
     try {
+        const fosil = await Fosil.obtenerFosilPorId(ID_FOSIL);
         // Obtener la URL de la imagen actual del fósil desde la base de datos
-        const rows = await Fosil.obtenerFosilPorId(ID_FOSIL);
-        const currentFotoUrl = rows[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        const urlFoto = await Fosil.obtenerFotoFosil(ID_FOSIL);
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (rows.length === 0) {
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        }
+
+        if (fosil.length === 0) {
             return res.status(404).json({ error: `El ID del fósil: ${ID_FOSIL} no fue encontrado` });
         }
 

@@ -5,6 +5,7 @@ const driveServices = require('../services/driveServices');
 const id_Carpeta_Drive_Principal = process.env.ID_CARPETA_DRIVE_INVESTIGACION;
 const id_Carpeta_Drive_AFPC = process.env.ID_CARPETA_DRIVE_INVESTIGACION_AFPC;
 const id_Carpeta_Drive_HRR = process.env.ID_CARPETA_DRIVE_INVESTIGACION_HRR;
+const id_Carpeta_Drive_MJGL = process.env.ID_CARPETA_DRIVE_INVESTIGACION_MJGL;
 
 /**
  * Controlador Investigacion
@@ -52,11 +53,11 @@ const crearInvestigacion = async (req, res) => {
         //Subir imagen a Google Drive
         if (req.file) {
             if (/^MGUPTC-CPi-HRR-\d{3}$/.test(ID_PIEZA)) {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_HRR);
+                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_HRR, ID_PIEZA);
             } else if (/^MGUPTC-CPi-AFPC-\d{4}[A-Za-z]?$/.test(ID_PIEZA)) {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_AFPC);
+                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_AFPC, ID_PIEZA);
             } else {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_Principal);
+                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_Principal, ID_PIEZA);
             }
         }
 
@@ -81,40 +82,71 @@ const actualizarInformacion = async (req, res) => {
         ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES } = req.body;
 
     try {
-        //Obtener la imagen actual desde la BD
+        const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZAPARAM);
         const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZAPARAM);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
+        let currentFolderId = null;
+        let newFolderId = null;
 
-        if (urlFoto.length === 0) {
+        if (pieza.length === 0) {
             return res.status(404).json({ error: `El ID de la pieza: ${ID_PIEZAPARAM} no fue encontrado` });
         }
 
-        //Subir imagen a Google Drive si se proporciona un archivo
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        }
+
+        // Determinar en qué carpeta debería estar según el ID_PIEZA
+        if (/^MGUPTC-CPi-HRR-/.test(ID_PIEZAPARAM)) {
+            currentFolderId = id_Carpeta_Drive_HRR;
+        } else if (/^MGUPTC-CPi-AFPC-/.test(ID_PIEZAPARAM)) {
+            currentFolderId = id_Carpeta_Drive_AFPC;
+        } else if (/^MGUPTC-CPi-MJGL-/.test(ID_PIEZAPARAM)) {
+            currentFolderId = id_Carpeta_Drive_MJGL;
+        } else {
+            currentFolderId = id_Carpeta_Drive_Principal;
+        }
+
+        if (/^MGUPTC-CPi-HRR-/.test(ID_PIEZA)) {
+            newFolderId = id_Carpeta_Drive_HRR;
+        } else if (/^MGUPTC-CPi-AFPC-/.test(ID_PIEZA)) {
+            newFolderId = id_Carpeta_Drive_AFPC;
+        } else if (/^MGUPTC-CPi-MJGL-/.test(ID_PIEZA)) {
+            newFolderId = id_Carpeta_Drive_MJGL;
+        } else {
+            newFolderId = id_Carpeta_Drive_Principal;
+        }
+
         if (req.file) {
             if (currentFileId) {
                 await driveServices.eliminarImagenDeDrive(currentFileId);
             }
-            if (/^MGUPTC-CPi-HRR-\d{3}$/.test(ID_PIEZA)) {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_HRR);
-            } else if (/^MGUPTC-CPi-AFPC-\d{4}[A-Za-z]?$/.test(ID_PIEZA)) {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_AFPC);
-            } else {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_Principal);
-            }
+            FOTO = await driveServices.subirImagenADrive(req.file, newFolderId, ID_PIEZA);
         } else {
-            FOTO = currentFotoUrl; //Mantener la imagen actual si no se proporciona una nueva
+            FOTO = currentFotoUrl;
+            if (ID_PIEZA !== ID_PIEZAPARAM) {
+                const piezaExistente = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
+                if (piezaExistente.length > 0) {
+                    return res.status(400).json({ error: `El ID_PIEZA: ${ID_PIEZA} ya está en uso` });
+                }
 
-            //Si se cambia el ID_PIEZA entonces el nombre del archivo relacionado tambien cambia
-            if (ID_PIEZA !== ID_PIEZAPARAM && currentFileId) {
-                await driveServices.actualizarNombreImagenDrive(currentFileId, ID_PIEZA);
+                if (currentFileId) {
+                    await driveServices.actualizarNombreImagenDrive(currentFileId, ID_PIEZA);
+                    
+                    // **Mover la imagen a la nueva carpeta si es necesario**
+                    if (currentFolderId !== newFolderId) {
+                        await driveServices.moverImagenDrive(currentFileId, currentFolderId, newFolderId);
+                    }
+                }
             }
         }
 
         const investigacionData = {
             ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO,
             ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, FOTO
-        }
+        };
 
         await Investigacion.actualizarInvestigacion(ID_PIEZAPARAM, investigacionData);
         res.status(200).json({ message: `Los datos de la pieza "${ID_PIEZA}" fueron actualizados correctamente` });
@@ -128,13 +160,20 @@ const borrarInvestigacion = async (req, res) => {
     const { ID_PIEZA } = req.params;
 
     try {
+        //Verificar si la pieza existe en la base de datos
+        const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
+        if (!pieza || pieza.length === 0) {
+            return res.status(404).json({ error: `El ID_PIEZA: ${ID_FOSIL} no fue encontrado.` });
+        }
+
         //Obtener la imagen actual desde la BD
         const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZA);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        let currentFotoUrl = null;
+        let currentFileId = null;
 
-        if (urlFoto.length === 0) {
-            return res.status(404).json({ error: `El ID de la pieza: ${ID_PIEZA} no fue encontrado` });
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         }
 
         // Eliminar la imagen de Google Drive
@@ -154,11 +193,19 @@ const borrarImagenInvestigacion = async (req, res) => {
     const { ID_PIEZA } = req.params;
 
     try {
+        const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
+
         // Obtener la URL de la imagen actual de la pieza desde la base de datos
         const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZA);
-        const currentFotoUrl = urlFoto[0].FOTO;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
-        if (urlFoto.length === 0) {
+        let currentFotoUrl = null;
+        let currentFileId = null;
+
+        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
+            currentFotoUrl = urlFoto[0].FOTO;
+            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        }
+
+        if (pieza.length === 0) {
             return res.status(404).json({ error: `El ID de la pieza: ${ID_PIEZA} no fue encontrado` });
         }
 

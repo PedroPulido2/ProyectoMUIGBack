@@ -56,7 +56,7 @@ const createProfile = async (req, res) => {
 
         //Subir imagen a Google Drive si se selecciono una imagen
         if (req.file) {
-            foto = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
+            foto = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, id_Perfil);
         }
         const perfilData = {
             id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo,
@@ -98,7 +98,7 @@ const updateProfile = async (req, res) => {
             if (currentFileId) {
                 await driveServices.eliminarImagenDeDrive(currentFileId);
             }
-            foto = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive);
+            foto = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, id_Perfil);
         } else {
             foto = currentFotoUrl;
             if (id_Perfil !== id_PerfilPARAM && currentFileId) {
@@ -116,7 +116,7 @@ const updateProfile = async (req, res) => {
         if (password && password.trim() !== '') {
             const hashedPassword = await generateHashedPassword(password);
             await Login.updatePassword(user, hashedPassword);
-        }        
+        }
 
         // Datos del perfil a actualizar
         const perfilData = { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, foto, isAdmin };
