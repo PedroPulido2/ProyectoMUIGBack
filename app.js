@@ -21,11 +21,19 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
 app.use(logger('dev'));
+const allowedOrigins = ['http://localhost', 'http://localhost:5173'];
+
 app.use(cors({
-  origin: 'http://localhost:5173', // O la URL de tu frontend en producción
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // Si usas autenticación con cookies o sesiones
+  credentials: true // Permite cookies o autenticación con tokens
 }));
 
 app.options('*', cors());

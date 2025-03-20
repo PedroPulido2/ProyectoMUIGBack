@@ -1,20 +1,19 @@
 FROM node:18
 
+# Establece el directorio de trabajo
 WORKDIR /app
 
-# Copia solo los archivos necesarios para instalar las dependencias
+# Copia solo los archivos de dependencias
 COPY package*.json ./
 
-# Establece NODE_ENV en producción y optimiza instalación de dependencias
-ENV NODE_ENV=production
+# Instala las dependencias (evita instalar dependencias de desarrollo en producción)
 RUN npm install --only=production
 
-# Instala las dependencias dentro del contenedor
-RUN npm install
-
-# Copia el resto de tu aplicación
+# Copia el resto del código de la aplicación
 COPY . .
 
-# Exponer el puerto y ejecutar la aplicación
+# Expone el puerto en el que corre la aplicación
 EXPOSE 3000
+
+# Comando para iniciar la aplicación
 CMD ["npm", "start"]
