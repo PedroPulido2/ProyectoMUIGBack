@@ -21,7 +21,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
 app.use(logger('dev'));
-const allowedOrigins = ['http://localhost', 'http://localhost:5173'];
+const allowedOrigins = ['http://localhost', 'http://localhost:5173','https://proyectomuigback-production.up.railway.app'];
 
 app.use(cors({
   origin: function (origin, callback) {
