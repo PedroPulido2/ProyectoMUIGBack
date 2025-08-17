@@ -117,7 +117,7 @@ const authUser = async (req, res) => {
         const isMatch = await bcrypt.compare(password, userData.password);
 
         if (!isMatch) {
-            return res.status(401).json({ error: 'Contraseña incorrecta' });
+            return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
         }
 
         const token = jwt.sign(
