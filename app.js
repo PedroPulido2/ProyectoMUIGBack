@@ -52,6 +52,14 @@ app.use('/api/roca', rocaRouter);
 app.use('/api/perfil', perfilRouter);
 app.use('/api/imagen',imagenRouter);
 
+// Servir archivos estáticos de React
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Para cualquier ruta no API, devolver index.html de React
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
