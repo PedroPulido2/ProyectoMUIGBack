@@ -17,11 +17,11 @@ const imagenRouter = require('./routes/imagenRouter');
 var app = express();
 
 // view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+//pp.set('views', path.join(__dirname, 'views'));
+//app.set('view engine', 'jade');
 
 app.use(logger('dev'));
-const allowedOrigins = ['http://localhost', 'http://localhost:5173','https://muig.up.railway.app',];
+const allowedOrigins = ['http://localhost','http://localhost:3000', 'http://localhost:5173','https://muig.up.railway.app',];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -41,7 +41,9 @@ app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Aquí servimos solo la carpeta dist (el build de Vite)
+app.use(express.static(path.join(__dirname, 'dist')));
 
 app.use('/', indexRouter);
 app.use('/api/login', loginRouter);
@@ -52,28 +54,24 @@ app.use('/api/roca', rocaRouter);
 app.use('/api/perfil', perfilRouter);
 app.use('/api/imagen',imagenRouter);
 
-// Servir archivos estáticos de React
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// Para cualquier ruta no API, devolver index.html de React
+// Cualquier ruta que no sea API devuelve el index.html de React
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// catch 404 and forward to error handler
+// catch 404
 app.use(function (req, res, next) {
   next(createError(404));
 });
 
-// error handler
+// error handler (sin jade)
 app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    error: true,
+    message: err.message
+  });
 });
+
 
 module.exports = app;
