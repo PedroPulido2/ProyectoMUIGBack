@@ -1,6 +1,10 @@
 const Login = require('../models/loginModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { logEvent } = require('../middleware/logger');
+const os = require('os');
+const { log } = require('console');
+
 
 /**
  * Controlador login
@@ -8,6 +12,8 @@ const jwt = require('jsonwebtoken');
  * NOTA: Este es para fin de pruebas con postman, a partir de perfilController se hace tambien gestion para la tabla login con 
  * funciones auxiliares para la contraseña. 
  */
+
+const MAX_INTENTOS = 5; // Numero maximo de intentos fallidos antes de bloquear la cuenta
 
 const getAllLogins = async (req, res) => {
     try {
@@ -102,6 +108,7 @@ const deleteLogin = async (req, res) => {
     }
 };
 
+
 const authUser = async (req, res) => {
     const { user, password } = req.body;
 
@@ -109,26 +116,56 @@ const authUser = async (req, res) => {
         const row = await Login.getLoginByUser(user);
 
         if (row.length === 0) {
-            return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+            return res.status(401).json({ error: 'Usuario o contraseña incorrecto' });
         }
         const userData = row[0];
+
+        // Si la cuenta está bloqueada
+        if (userData.estado === 'BLOQUEADO') {
+            await logEvent({
+                id_usuario: userData.user,
+                actividad: 'LOGIN_BLOCKED',
+                ip: req.ip,
+                mac: os.hostname(),
+                detalle: 'Intento de acceso a cuenta bloqueada',
+                estado: 'DENEGADO'
+            });
+            return res.status(403).json({ error: 'La cuenta está bloqueada. Contacte al administrador.' });
+        }
 
         //comparar la contraseña ingresada con el hash almacenado
         const isMatch = await bcrypt.compare(password, userData.password);
 
         if (!isMatch) {
-            return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+            await Login.increaseFailedAttempts(user, MAX_INTENTOS);
+            return res.status(401).json({ error: 'Usuario o contraseña incorrecto' });
         }
 
+        await Login.resetFailedAttempts(user);
+
+        // Generar el token JWT
         const token = jwt.sign(
             { id_Perfil: userData.id_Perfil, user: userData.user, isAdmin: userData.isAdmin, foto: userData.foto },
             process.env.SECRET_KEY,
             { expiresIn: "1h" }
         );
 
+        await logEvent({
+            id_usuario: userData.user,
+            actividad: 'LOGIN_SUCCESS',
+            ip: req.ip,
+            mac: os.hostname(),
+            detalle: 'Inicio de sesión exitoso',
+            estado: 'OK'
+        });
         res.status(200).json({ message: 'Autenticacion exitosa', token });
     } catch (error) {
         console.error('Error al autenticar el usuario:', error.message);
+        await logEvent({
+            actividad: 'LOGIN_ERROR',
+            detalle: error.message,
+            estado: 'ERROR'
+        });
         res.status(500).json({ error: 'Error al autenticar el usuario' });
     }
 };
@@ -147,7 +184,7 @@ const verifyPassword = async (req, res) => {
 
         const row = await Login.getLoginByUser(user);
         if (row.length === 0) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+            return res.status(404).json({ error: 'Usuario o contraseña incorrectos' });
         }
 
         const userData = row[0];
@@ -169,7 +206,7 @@ const verifyPassword = async (req, res) => {
 const updatePassword = async (req, res) => {
     const authHeader = req.headers["authorization"];
     if (!authHeader) return res.status(401).json({ error: "No autorizado" });
-    
+
     const { user } = req.params;
     const { password } = req.body;
 
@@ -190,4 +227,39 @@ const updatePassword = async (req, res) => {
     }
 };
 
-module.exports = { getAllLogins, getLoginByUser, createLogin, updateLogin, deleteLogin, authUser, verifyPassword, updatePassword }
+const unlockUser = async (req, res) => {
+    const { user } = req.params;
+
+    try {
+        const result = await Login.unlockUser(user);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        res.status(200).json({ message: `El usuario ${user} fue desbloqueado con éxito` });
+    } catch (error) {
+        console.error('Error al desbloquear el usuario:', error.message);
+        res.status(500).json({ error: 'Error al desbloquear el usuario' });
+    }
+};
+
+const logoutUser = async (req, res) => {
+    try {
+        await logEvent({
+            id_usuario: req.user?.user || 'desconocido',
+            actividad: 'LOGOUT',
+            ip: req.ip,
+            mac: os.hostname(),
+            detalle: 'Sesión cerrada por el usuario',
+            estado: 'OK'
+        });
+
+        res.status(200).json({ message: 'Sesión cerrada correctamente' });
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error.message);
+        res.status(500).json({ error: 'Error al cerrar sesión' });
+    }
+};
+
+module.exports = { getAllLogins, getLoginByUser, createLogin, updateLogin, deleteLogin, authUser, verifyPassword, updatePassword, unlockUser, logoutUser };

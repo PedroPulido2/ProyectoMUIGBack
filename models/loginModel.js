@@ -7,13 +7,13 @@ const db = require('../config/bd');
 
 const Login = {
     async getAllLogins() {
-        const [rows] = await db.query('SELECT user, id_Perfil FROM login');
+        const [rows] = await db.query('SELECT user, id_Perfil, estado, intentos_fallidos FROM login');
         return rows;
     },
 
     async createLogin(user, hashedPassword, idProfile) {
-        const [result] = await db.query('INSERT INTO login (user, password, id_Perfil) VALUES (?,?,?)',
-            [user, hashedPassword, idProfile]
+        const [result] = await db.query('INSERT INTO login (user, password, id_Perfil, estado, intentos_fallidos) VALUES (?,?,?,?,?)',
+            [user, hashedPassword, idProfile, 'ACTIVO', 0]
         );
         return result;
     },
@@ -31,22 +31,47 @@ const Login = {
     },
 
     async getLoginByUser(user) {
-        const [row] = await db.query('SELECT login.id_Perfil, user , password, isAdmin, foto FROM login INNER JOIN perfil USING (id_Perfil) WHERE user = ?', [user]);
+        const [row] = await db.query('SELECT login.id_Perfil, user , password, isAdmin, foto, estado, intentos_fallidos FROM login INNER JOIN perfil USING (id_Perfil) WHERE user = ?', [user]);
         return row;
     },
 
-    async getLoginByIdPerfil(id_Perfil){
-        const [row] = await db.query('SELECT * FROM login WHERE id_Perfil = ?',[id_Perfil]);
+    async getLoginByIdPerfil(id_Perfil) {
+        const [row] = await db.query('SELECT * FROM login WHERE id_Perfil = ?', [id_Perfil]);
         return row;
     },
 
-    async updatePassword(user, hashedPassword){
+    async updatePassword(user, hashedPassword) {
         const [result] = await db.query('UPDATE login SET password = ? WHERE user = ?',
             [hashedPassword, user]
         );
         return result;
-    }
+    },
 
+    async increaseFailedAttempts(user, maxIntentos) {
+        const [result] = await db.query(
+            `UPDATE login 
+             SET intentos_fallidos = intentos_fallidos + 1,
+                 estado = CASE WHEN intentos_fallidos + 1 >= ? THEN 'BLOQUEADO' ELSE estado END
+             WHERE user = ?`,
+            [maxIntentos, user]
+        );
+        return result;
+    },
+
+    async resetFailedAttempts(user) {
+        const [result] = await db.query(
+            'UPDATE login SET intentos_fallidos = 0 WHERE user = ?',
+            [user]
+        );
+        return result;
+    },
+
+    async unlockUser(user){
+        const [result] = await db.query(`UPDATE login SET estado = 'ACTIVO', intentos_fallidos = 0 WHERE user = ?`,
+            [user]
+        );
+        return result;
+    }
 };
 
 module.exports = Login;

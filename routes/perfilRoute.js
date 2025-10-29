@@ -7,7 +7,7 @@ const auth = require('../middlewares/auth');
 
 router.get('/', auth, perfilController.getAllProfiles);
 router.get('/:id_Perfil', auth, perfilController.getProfileById);
-router.post('/', upload.single('foto'), auth, perfilController.createProfile);
+router.post('/', upload.single('foto'), perfilController.createProfile);
 router.put('/:id_PerfilPARAM', auth, upload.single('foto'), perfilController.updateProfile);
 router.delete('/:id_Perfil', auth, perfilController.deleteProfile);
 router.delete('/:id_Perfil/image', auth, perfilController.deleteImageProfile);

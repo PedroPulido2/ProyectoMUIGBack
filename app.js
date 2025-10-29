@@ -13,6 +13,7 @@ const mineralRouter = require('./routes/mineralRoutes');
 const rocaRouter = require('./routes/rocaRoutes');
 const perfilRouter = require('./routes/perfilRoute');
 const imagenRouter = require('./routes/imagenRouter');
+import { loggerMiddleware } from './middlewares/logger.js';
 
 var app = express();
 
@@ -22,6 +23,8 @@ var app = express();
 
 app.use(logger('dev'));
 const allowedOrigins = ['http://localhost','http://localhost:3000', 'http://localhost:5173','https://muig.up.railway.app',];
+
+app.use(loggerMiddleware);
 
 app.use(cors({
   origin: function (origin, callback) {

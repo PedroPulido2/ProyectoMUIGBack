@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
   if (!authHeader) {
-    return res.status(401).json({ error: "No autorizado. Falta el token." });
+    return res.status(401).json({ error: "No autorizado. Ausencia el token." });
   }
 
   const token = authHeader.split(" ")[1]; // "Bearer <token>"
