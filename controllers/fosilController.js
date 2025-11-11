@@ -3,7 +3,7 @@ require('dotenv').config();
 const Fosil = require('../models/fosilModel');
 const driveServices = require('../services/driveServices');
 const id_Carpeta_Drive = process.env.ID_CARPETA_DRIVE_FOSIL;
-
+const { logEvent } = require('../middlewares/logger');
 /**
  * Controlador Fosil
  * En este archivo se definen los controladores asociados al manejo de fosiles, se controlan los errores y solicitudes.
@@ -38,7 +38,7 @@ const crearFosil = async (req, res) => {
 
     const { ID_FOSIL, N_BARRANTES, COLECCION, UBICACION, FILO, SUBFILO, CLASE, ORDEN,
         FAMILIA, GENERO, NOMBRE_FOSIL, PARTES, TIEMPO_GEOLOGICO, COLECTOR, LOCALIDAD,
-        VITRINA, BANDEJA, OBSERVACIONES } = req.body;
+        VITRINA, BANDEJA, OBSERVACIONES, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Verificar si el ID ya existe en la base de datos
@@ -60,6 +60,17 @@ const crearFosil = async (req, res) => {
         };
 
         await Fosil.crearFosil(fosilData);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'FOSIL_CREATE',
+            ip: req.ip,
+            module: 'FOSIL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} registro un nuevo fosil con id: ${ID_FOSIL}`
+        });
+
         res.status(201).json({ message: 'Datos del fosil registrados correctamente' });
     } catch (error) {
         console.error('Error al crear el fosil:', error.message);
@@ -73,7 +84,7 @@ const actualizarFosil = async (req, res) => {
     const { ID_FOSILPARAM } = req.params;
     const { ID_FOSIL, N_BARRANTES, COLECCION, UBICACION, FILO, SUBFILO, CLASE, ORDEN,
         FAMILIA, GENERO, NOMBRE_FOSIL, PARTES, TIEMPO_GEOLOGICO, COLECTOR, LOCALIDAD,
-        VITRINA, BANDEJA, OBSERVACIONES } = req.body;
+        VITRINA, BANDEJA, OBSERVACIONES, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const fosil = await Fosil.obtenerFosilPorId(ID_FOSILPARAM);
@@ -119,6 +130,17 @@ const actualizarFosil = async (req, res) => {
         };
 
         await Fosil.actualizarFosil(ID_FOSILPARAM, fosilData);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'FOSIL_UPDATE',
+            ip: req.ip,
+            module: 'FOSIL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} edito los datos del fosil con id: ${ID_FOSIL}`
+        });
+
         res.status(200).json({ message: `Los datos del fosil ${ID_FOSIL} fueron actualizados correctamente` });
     } catch (error) {
         console.error('Error al actualizar el fosil:', error.message);
@@ -128,6 +150,7 @@ const actualizarFosil = async (req, res) => {
 
 const borrarFosil = async (req, res) => {
     const { ID_FOSIL } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         // Verificar si el fósil existe en la base de datos
@@ -152,6 +175,17 @@ const borrarFosil = async (req, res) => {
         }
 
         await Fosil.eliminarFosil(ID_FOSIL);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'FOSIL_DELETE',
+            ip: req.ip,
+            module: 'FOSIL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} elimino los datos del fosil con id: ${ID_FOSIL}`
+        });
+
         res.status(200).json({ message: `El fosil fue eliminado correctamente` });
     } catch (error) {
         console.error('Error al eliminar el fosil:', error.message);
@@ -161,6 +195,7 @@ const borrarFosil = async (req, res) => {
 
 const borrarFotoFosil = async (req, res) => {
     const { ID_FOSIL } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const fosil = await Fosil.obtenerFosilPorId(ID_FOSIL);
@@ -188,6 +223,17 @@ const borrarFotoFosil = async (req, res) => {
         }
 
         await Fosil.eliminarFotoFosil(ID_FOSIL);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'FOSIL_IMAGE_DELETE',
+            ip: req.ip,
+            module: 'FOSIL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} elimino la imagen del fosil con id: ${ID_FOSIL}`
+        });
+
         res.status(200).json({ message: `La imagen del fósil con ID ${ID_FOSIL} fue eliminada correctamente` });
     } catch (error) {
         console.error('Error al eliminar foto del fosil:', error.message);

@@ -5,6 +5,7 @@ const Perfil = require('../models/perfilModel');
 const driveServices = require('../services/driveServices');
 const Login = require('../models/loginModel');
 const id_Carpeta_Drive = process.env.ID_CARPETA_PERFIL;
+const { logEvent } = require('../middlewares/logger');
 
 /**
  * Controlador Perfiles
@@ -37,7 +38,7 @@ const getProfileById = async (req, res) => {
 
 const createProfile = async (req, res) => {
     var foto = '';
-    const { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, user, password, isAdmin } = req.body;
+    const { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, user, password, isAdmin, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Verificar si el ID ya existe en la base de datos
@@ -70,6 +71,28 @@ const createProfile = async (req, res) => {
         await Perfil.createProfile(perfilData);
         await Login.createLogin(user, hashedPassword, id_Perfil);
 
+        if (typeof usernameAccion !== 'undefined' && usernameAccion !== null) {
+            await logEvent({
+                id_user: idPerfilAccion,
+                user: usernameAccion,
+                activity: 'PROFILE_CREATE',
+                ip: req.ip,
+                module: 'PERFIL',
+                status: 'OK',
+                detail: `El usuario: ${usernameAccion} registro la cuenta del usuario ${user}`
+            });
+        } else {
+            await logEvent({
+                id_user: id_Perfil,
+                user: user,
+                activity: 'PROFILE_CREATE',
+                ip: req.ip,
+                module: 'PERFIL',
+                status: 'OK',
+                detail: `Se registro la cuenta del usuario ${user}`
+            });
+        }
+
         res.status(201).json({ message: 'Datos del perfil fueron registrados correctamente' });
     } catch (error) {
         console.error('Error al crear el perfil:', error.message);
@@ -80,8 +103,14 @@ const createProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
     try {
         const { id_PerfilPARAM } = req.params;
-        const { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, user, password, isAdmin } = req.body;
+        const { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, user, password, isAdmin, estado, idPerfilAccion, usernameAccion } = req.body;
         let foto = '';
+
+        const idPerfilData = await Login.getLoginByIdPerfil(id_PerfilPARAM);
+        const estadoAnterior = idPerfilData[0].estado;
+
+        const perfil = await Perfil.getProfileById(id_PerfilPARAM);
+        const isAdminAnterior = perfil[0].isAdmin;
 
         // Obtener la imagen actual desde la BD
         const urlFoto = await Perfil.getImageProfile(id_PerfilPARAM);
@@ -116,12 +145,116 @@ const updateProfile = async (req, res) => {
         if (password && password.trim() !== '') {
             const hashedPassword = await generateHashedPassword(password);
             await Login.updatePassword(user, hashedPassword);
+
+            if (typeof usernameAccion !== 'undefined' && usernameAccion !== null) {
+                await logEvent({
+                    id_user: idPerfilAccion,
+                    user: usernameAccion,
+                    activity: 'PROFILE_CHANGE_PASSWORD',
+                    ip: req.ip,
+                    module: 'PERFIL',
+                    status: 'OK',
+                    detail: `El usuario: ${usernameAccion} cambio la contraseña de la cuenta del usuario: ${user}`
+                });
+            } else {
+                await logEvent({
+                    id_user: id_Perfil,
+                    user: user,
+                    activity: 'PROFILE_CHANGE_PASSWORD',
+                    ip: req.ip,
+                    module: 'PERFIL',
+                    status: 'OK',
+                    detail: `El usuario: ${user} cambio su contraseña`
+                });
+            }
         }
 
         // Datos del perfil a actualizar
         const perfilData = { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, foto, isAdmin };
 
         await Perfil.updateProfile(id_PerfilPARAM, perfilData);
+
+        if (estado && estado !== estadoAnterior) {
+            if (estado === 'BLOQUEADO') {
+                await Login.blockuser(user);
+                await logEvent({
+                    id_user: idPerfilAccion,
+                    user: usernameAccion,
+                    activity: 'PROFILE_BLOCK',
+                    ip: req.ip,
+                    module: 'PERFIL',
+                    status: 'OK',
+                    detail: `El usuario: ${usernameAccion} bloqueó la cuenta del usuario: ${user}`
+                });
+            } else if (estado === 'ACTIVO') {
+                await Login.unlockUser(user);
+                await logEvent({
+                    id_user: idPerfilAccion,
+                    user: usernameAccion,
+                    activity: 'PROFILE_UNLOCK',
+                    ip: req.ip,
+                    module: 'PERFIL',
+                    status: 'OK',
+                    detail: `El usuario: ${usernameAccion} desbloqueo la cuenta del usuario: ${user}`
+                });
+            }
+        }
+
+        if (typeof usernameAccion !== 'undefined' && usernameAccion !== null && typeof user !== 'undefined' && user !== null) {
+            await logEvent({
+                id_user: idPerfilAccion,
+                user: usernameAccion,
+                activity: 'PROFILE_UPDATE',
+                ip: req.ip,
+                module: 'PERFIL',
+                status: 'OK',
+                detail: `El usuario: ${usernameAccion} edito los datos de la cuenta del usuario: ${user}`
+            });
+        } else {
+            await logEvent({
+                id_user: id_Perfil,
+                user: usernameAccion,
+                activity: 'PROFILE_UPDATE',
+                ip: req.ip,
+                module: 'PERFIL',
+                status: 'OK',
+                detail: `El usuario: ${usernameAccion} edito sus datos personales`
+            });
+        }
+
+        if (isAdmin && isAdmin !== isAdminAnterior) {
+            if (isAdmin === '2') {
+                await logEvent({
+                    id_user: idPerfilAccion,
+                    user: usernameAccion,
+                    activity: 'PROFILE_SET_ADMIN',
+                    ip: req.ip,
+                    module: 'PERFIL',
+                    status: 'OK',
+                    detail: `El usuario: ${usernameAccion} otorgó privilegios de administrador a la cuenta del usuario: ${user}`
+                });
+            } else if (isAdmin === '1') {
+                await logEvent({
+                    id_user: idPerfilAccion,
+                    user: usernameAccion,
+                    activity: 'PROFILE_SET_NORMAL',
+                    ip: req.ip,
+                    module: 'PERFIL',
+                    status: 'OK',
+                    detail: `El usuario: ${usernameAccion} removió privilegios de administrador a la cuenta del usuario: ${user}`
+                });
+            } else if (isAdmin === '3') {
+                await logEvent({
+                    id_user: idPerfilAccion,
+                    user: usernameAccion,
+                    activity: 'PROFILE_SET_SUPERADMIN',
+                    ip: req.ip,
+                    module: 'PERFIL',
+                    status: 'OK',
+                    detail: `El usuario: ${usernameAccion} otorgó privilegios de superadministrador a la cuenta del usuario: ${user}`
+                });
+            }
+        }
 
         res.status(200).json({ message: 'Datos del perfil fueron actualizados correctamente' });
 
@@ -134,9 +267,9 @@ const updateProfile = async (req, res) => {
     }
 };
 
-
 const deleteProfile = async (req, res) => {
     const { id_Perfil } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Obtener la imagen actual desde la BD
@@ -158,6 +291,29 @@ const deleteProfile = async (req, res) => {
 
         await Login.deleteLogin(user);
         await Perfil.deleteProfile(id_Perfil);
+
+        if (usernameAccion !== user) {
+            await logEvent({
+                id_user: idPerfilAccion,
+                user: usernameAccion,
+                activity: 'PROFILE_DELETE',
+                ip: req.ip,
+                module: 'PERFIL',
+                status: 'OK',
+                detail: `El usuario: ${usernameAccion} eliminó la cuenta del usuario: ${user}`
+            });
+        } else {
+            await logEvent({
+                id_user: id_Perfil,
+                user: user,
+                activity: 'PROFILE_DELETE',
+                ip: req.ip,
+                module: 'PERFIL',
+                status: 'OK',
+                detail: `El usuario: ${user} eliminó su cuenta`
+            });
+        }
+
         res.status(200).json({ message: `El perfil fue eliminado correctamente` });
     } catch (error) {
         console.error('Error al eliminar el perfil:', error.message);
@@ -167,6 +323,7 @@ const deleteProfile = async (req, res) => {
 
 const deleteImageProfile = async (req, res) => {
     const { id_Perfil } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         // Obtener la URL de la imagen actual del perfil desde la base de datos
@@ -188,6 +345,29 @@ const deleteImageProfile = async (req, res) => {
         }
 
         await Perfil.deleteImageProfile(id_Perfil);
+
+        if (idPerfilAccion !== id_Perfil) {
+            await logEvent({
+                id_user: idPerfilAccion,
+                user: usernameAccion,
+                activity: 'PROFILE_IMAGE_DELETE',
+                ip: req.ip,
+                module: 'PERFIL',
+                status: 'OK',
+                detail: `El usuario: ${usernameAccion} eliminó la foto de la cuenta del usuario: ${id_Perfil}`
+            });
+        } else {
+            await logEvent({
+                id_user: id_Perfil,
+                user: usernameAccion,
+                activity: 'PROFILE_IMAGE_DELETE',
+                ip: req.ip,
+                module: 'PERFIL',
+                status: 'OK',
+                detail: `El usuario: ${id_Perfil} eliminó la foto de perfil`
+            });
+        }
+
         res.status(200).json({ message: `La imagen del perfil con numero de documento: ${id_Perfil} fue eliminada correctamente` });
     } catch (error) {
         console.error('Error al eliminar foto del perfil:', error.message);

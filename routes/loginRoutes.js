@@ -8,11 +8,11 @@ router.get('/', loginController.getAllLogins);
 router.get('/:user', loginController.getLoginByUser);
 router.post('/', loginController.createLogin);
 router.put('/cPw/:user', auth, loginController.updatePassword);
-router.put('/:userParam', loginController.updateLogin);
+router.put('/:userParam', auth, loginController.updateLogin);
 router.delete('/:user', auth, loginController.deleteLogin);
 router.post('/auth', loginController.authUser);
 router.post('/verify', loginController.verifyPassword);
-router.post('/logout', auth, loginController.logoutUser);
-router.put('/unlock/:user', auth, loginController.unlockUser);
+router.post('/logout/:user', auth, loginController.logoutUser);
+router.post('/unlock/:user', auth, loginController.unlockUser);
 
 module.exports = router;

@@ -13,7 +13,7 @@ const mineralRouter = require('./routes/mineralRoutes');
 const rocaRouter = require('./routes/rocaRoutes');
 const perfilRouter = require('./routes/perfilRoute');
 const imagenRouter = require('./routes/imagenRouter');
-import { loggerMiddleware } from './middlewares/logger.js';
+const logRoutes = require('./routes/logRoutes');
 
 var app = express();
 
@@ -22,9 +22,7 @@ var app = express();
 //app.set('view engine', 'jade');
 
 app.use(logger('dev'));
-const allowedOrigins = ['http://localhost','http://localhost:3000', 'http://localhost:5173','https://muig.up.railway.app',];
-
-app.use(loggerMiddleware);
+const allowedOrigins = ['http://localhost', 'http://localhost:3000', 'http://localhost:5173', 'https://muig.up.railway.app',];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -48,6 +46,7 @@ app.use(cookieParser());
 // Aquí servimos solo la carpeta dist (el build de Vite)
 app.use(express.static(path.join(__dirname, 'dist')));
 
+
 app.use('/', indexRouter);
 app.use('/api/login', loginRouter);
 app.use('/api/fosil', fosilRouter);
@@ -55,7 +54,9 @@ app.use('/api/investigacion', investigacionRouter);
 app.use('/api/mineral', mineralRouter);
 app.use('/api/roca', rocaRouter);
 app.use('/api/perfil', perfilRouter);
-app.use('/api/imagen',imagenRouter);
+app.use('/api/imagen', imagenRouter);
+
+app.use("/api/logs", logRoutes);
 
 // Cualquier ruta que no sea API devuelve el index.html de React
 app.get('*', (req, res) => {

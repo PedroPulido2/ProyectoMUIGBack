@@ -4,6 +4,7 @@ const Fosil = require('../models/fosilModel');
 const Mineral = require('../models/mineralModel');
 const driveServices = require('../services/driveServices');
 const id_Carpeta_Drive = process.env.ID_CARPETA_DRIVE_MINERAL;
+const { logEvent } = require('../middlewares/logger');
 
 /**
  * Controlador Minerales
@@ -38,7 +39,7 @@ const crearMineral = async (req, res) => {
     var FOTO = '';
 
     const { ID_MINERAL, N_BARRANTES, COLECCION, NOMBRE_MINERAL, CANTIDAD, GRUPO_MINERALOGICO, REGION, SUBGRUPO, COMPOSICION,
-        CARACTERISTICAS, COLECTOR, OBSERVACIONES, UBICACION } = req.body;
+        CARACTERISTICAS, COLECTOR, OBSERVACIONES, UBICACION, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         // Verificar si el ID ya existe en la base de datos
@@ -60,6 +61,17 @@ const crearMineral = async (req, res) => {
         }
 
         await Mineral.crearMineral(mineralData);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'MINERAL_CREATE',
+            ip: req.ip,
+            module: 'MINERAL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} registro un nuevo mineral con id: ${ID_MINERAL}`
+        });
+
         res.status(201).json({ message: 'Datos del mineral registrados correctamente' });
     } catch (error) {
         console.error('Error al crear el mineral:', error.message);
@@ -72,7 +84,7 @@ const actualizarMineral = async (req, res) => {
 
     const { ID_MINERALPARAM } = req.params;
     const { ID_MINERAL, N_BARRANTES, COLECCION, NOMBRE_MINERAL, CANTIDAD, GRUPO_MINERALOGICO, REGION, SUBGRUPO, COMPOSICION,
-        CARACTERISTICAS, COLECTOR, OBSERVACIONES, UBICACION } = req.body;
+        CARACTERISTICAS, COLECTOR, OBSERVACIONES, UBICACION, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const mineral = await Mineral.obtenerMineralPorId(ID_MINERALPARAM);
@@ -119,6 +131,17 @@ const actualizarMineral = async (req, res) => {
         }
 
         await Mineral.actualizarMineral(ID_MINERALPARAM, mineralData);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'MINERAL_UPDATE',
+            ip: req.ip,
+            module: 'MINERAL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} edito los datos del mineral con id: ${ID_MINERAL}`
+        });
+
         res.status(200).json({ message: `Los datos del mineral ${ID_MINERAL} fueron actualizados correctamente` });
     } catch (error) {
         console.error('Error al actualizar el mineral:', error.message);
@@ -128,6 +151,7 @@ const actualizarMineral = async (req, res) => {
 
 const borrarMineral = async (req, res) => {
     const { ID_MINERAL } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Verificar si el mineral existe en la base de datos
@@ -151,6 +175,17 @@ const borrarMineral = async (req, res) => {
         }
 
         await Mineral.eliminarMineral(ID_MINERAL);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'MINERAL_DELETE',
+            ip: req.ip,
+            module: 'MINERAL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} elimino los datos del mineral con id: ${ID_MINERAL}`
+        });
+
         res.status(200).json({ message: `El mineral fue eliminado correctamente` });
     } catch (error) {
         console.error('Error al eliminar el mineral:', error.message);
@@ -160,6 +195,7 @@ const borrarMineral = async (req, res) => {
 
 const borrarImagenMineral = async (req, res) => {
     const { ID_MINERAL } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const mineral = await Mineral.obtenerMineralPorId(ID_MINERAL);
@@ -187,6 +223,17 @@ const borrarImagenMineral = async (req, res) => {
         }
 
         await Mineral.eliminarFotoMineral(ID_MINERAL);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'MINERAL_IMAGE_DELETE',
+            ip: req.ip,
+            module: 'MINERAL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} elimino la imagen del mineral con id: ${ID_MINERAL}`
+        });
+
         res.status(200).json({ message: `La imagen del mineral con ID ${ID_MINERAL} fue eliminada correctamente` });
     } catch (error) {
         console.error('Error al eliminar la foto del mineral:', error.message);

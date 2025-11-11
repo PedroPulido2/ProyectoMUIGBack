@@ -6,6 +6,7 @@ const id_Carpeta_Drive_Principal = process.env.ID_CARPETA_DRIVE_INVESTIGACION;
 const id_Carpeta_Drive_AFPC = process.env.ID_CARPETA_DRIVE_INVESTIGACION_AFPC;
 const id_Carpeta_Drive_HRR = process.env.ID_CARPETA_DRIVE_INVESTIGACION_HRR;
 const id_Carpeta_Drive_MJGL = process.env.ID_CARPETA_DRIVE_INVESTIGACION_MJGL;
+const { logEvent } = require('../middlewares/logger');
 
 /**
  * Controlador Investigacion
@@ -40,7 +41,7 @@ const crearInvestigacion = async (req, res) => {
     var FOTO = '';
 
     const { ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO,
-        ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES } = req.body;
+        ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         // Verificar si el ID ya existe en la base de datos
@@ -67,6 +68,17 @@ const crearInvestigacion = async (req, res) => {
         };
 
         await Investigacion.crearInvestigacion(investigacionData);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'INVESTIGACION_CREATE',
+            ip: req.ip,
+            module: 'INVESTIGACION',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} registro una nueva pieza con id: ${ID_PIEZA}`
+        });
+
         res.status(201).json({ message: 'Los Datos de la nueva investigacion registrados correctamente' });
     } catch (error) {
         console.error('Error al crear la investigación:', error.message);
@@ -79,7 +91,7 @@ const actualizarInformacion = async (req, res) => {
 
     const { ID_PIEZAPARAM } = req.params;
     const { ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO,
-        ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES } = req.body;
+        ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZAPARAM);
@@ -134,7 +146,7 @@ const actualizarInformacion = async (req, res) => {
 
                 if (currentFileId) {
                     await driveServices.actualizarNombreImagenDrive(currentFileId, ID_PIEZA);
-                    
+
                     // **Mover la imagen a la nueva carpeta si es necesario**
                     if (currentFolderId !== newFolderId) {
                         await driveServices.moverImagenDrive(currentFileId, currentFolderId, newFolderId);
@@ -149,6 +161,17 @@ const actualizarInformacion = async (req, res) => {
         };
 
         await Investigacion.actualizarInvestigacion(ID_PIEZAPARAM, investigacionData);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'INVESTIGACION_UPDATE',
+            ip: req.ip,
+            module: 'INVESTIGACION',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} edito los datos de la pieza con id: ${ID_PIEZA}`
+        });
+
         res.status(200).json({ message: `Los datos de la pieza "${ID_PIEZA}" fueron actualizados correctamente` });
     } catch (error) {
         console.error('Error al actualizar investigación:', error.message);
@@ -158,12 +181,13 @@ const actualizarInformacion = async (req, res) => {
 
 const borrarInvestigacion = async (req, res) => {
     const { ID_PIEZA } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Verificar si la pieza existe en la base de datos
         const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
         if (!pieza || pieza.length === 0) {
-            return res.status(404).json({ error: `El ID_PIEZA: ${ID_FOSIL} no fue encontrado.` });
+            return res.status(404).json({ error: `El ID_PIEZA: ${ID_PIEZA} no fue encontrado.` });
         }
 
         //Obtener la imagen actual desde la BD
@@ -182,6 +206,17 @@ const borrarInvestigacion = async (req, res) => {
         }
 
         await Investigacion.eliminarInvestigacion(ID_PIEZA);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'INVESTIGACION_DELETE',
+            ip: req.ip,
+            module: 'INVESTIGACION',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} elimino los datos de la pieza con id: ${ID_PIEZA}`
+        });
+
         res.status(200).json({ message: `Los datos de la pieza fueron eliminados correctamente` });
     } catch (error) {
         console.error('Error al eliminar investigación:', error.message);
@@ -191,6 +226,7 @@ const borrarInvestigacion = async (req, res) => {
 
 const borrarImagenInvestigacion = async (req, res) => {
     const { ID_PIEZA } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
@@ -220,6 +256,17 @@ const borrarImagenInvestigacion = async (req, res) => {
 
         // Actualizar el campo FOTO a NULL en la base de datos
         await Investigacion.eliminarFotoInvestigacion(ID_PIEZA);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'INVESTIGACION_IMAGE_DELETE',
+            ip: req.ip,
+            module: 'INVESTIGACION',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} elimino la imagen de la pieza con id: ${ID_PIEZA}`
+        });
+
         res.status(200).json({ message: `La imagen de la pieza con ID ${ID_PIEZA} fue eliminada correctamente` });
     } catch (error) {
         console.error('Error al eliminar la foto:', error.message);

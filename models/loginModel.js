@@ -71,6 +71,13 @@ const Login = {
             [user]
         );
         return result;
+    },
+
+    async blockuser(user){
+        const [result] = await db.query(`UPDATE login SET estado = 'BLOQUEADO' WHERE user = ?`,
+            [user]
+        );
+        return result;
     }
 };
 

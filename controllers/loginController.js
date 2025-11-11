@@ -1,11 +1,7 @@
 const Login = require('../models/loginModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { logEvent } = require('../middleware/logger');
-const os = require('os');
-const { log } = require('console');
-
-
+const { logEvent } = require('../middlewares/logger');
 /**
  * Controlador login
  * En este archivo se definen los controladores asociados al manejo del login, se controlan los errores y solicitudes.
@@ -108,7 +104,6 @@ const deleteLogin = async (req, res) => {
     }
 };
 
-
 const authUser = async (req, res) => {
     const { user, password } = req.body;
 
@@ -123,12 +118,13 @@ const authUser = async (req, res) => {
         // Si la cuenta está bloqueada
         if (userData.estado === 'BLOQUEADO') {
             await logEvent({
-                id_usuario: userData.user,
-                actividad: 'LOGIN_BLOCKED',
+                id_user: userData.id_Perfil,
+                user: userData.user,
+                activity: 'LOGIN_BLOCKED',
                 ip: req.ip,
-                mac: os.hostname(),
-                detalle: 'Intento de acceso a cuenta bloqueada',
-                estado: 'DENEGADO'
+                module: 'LOGIN',
+                status: 'DENIED',
+                detail: 'Cuenta bloqueada por múltiples intentos fallidos'
             });
             return res.status(403).json({ error: 'La cuenta está bloqueada. Contacte al administrador.' });
         }
@@ -151,20 +147,24 @@ const authUser = async (req, res) => {
         );
 
         await logEvent({
-            id_usuario: userData.user,
-            actividad: 'LOGIN_SUCCESS',
+            id_user: userData.id_Perfil,
+            user: userData.user,
+            activity: 'LOGIN_SUCCESS',
             ip: req.ip,
-            mac: os.hostname(),
-            detalle: 'Inicio de sesión exitoso',
-            estado: 'OK'
+            module: 'LOGIN',
+            status: 'OK',
+            detail: 'Inicio de sesión exitoso'
         });
+
         res.status(200).json({ message: 'Autenticacion exitosa', token });
     } catch (error) {
         console.error('Error al autenticar el usuario:', error.message);
         await logEvent({
-            actividad: 'LOGIN_ERROR',
-            detalle: error.message,
-            estado: 'ERROR'
+            activity: 'LOGIN_ERROR',
+            ip: req.ip,
+            module: 'LOGIN',
+            status: 'ERROR',
+            detail: error.message
         });
         res.status(500).json({ error: 'Error al autenticar el usuario' });
     }
@@ -204,11 +204,8 @@ const verifyPassword = async (req, res) => {
 };
 
 const updatePassword = async (req, res) => {
-    const authHeader = req.headers["authorization"];
-    if (!authHeader) return res.status(401).json({ error: "No autorizado" });
-
     const { user } = req.params;
-    const { password } = req.body;
+    const { password, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Cifrar contraseñas
@@ -220,6 +217,19 @@ const updatePassword = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
         }
+
+        if (usernameAccion === user) {
+            await logEvent({
+            id_user: idPerfilAccion,
+            user: user,
+            activity: 'PASSWORD_UPDATE',
+            ip: req.ip,
+            module: 'LOGIN',
+            status: 'OK',
+            detail: `El usuario ${user} ha actualizado su contraseña`
+        });
+        }
+        
         res.status(200).json({ message: 'Contraseña actualizada con exito' });
     } catch (error) {
         console.error('Error al actualizar la contraseña:', error.message);
@@ -229,6 +239,7 @@ const updatePassword = async (req, res) => {
 
 const unlockUser = async (req, res) => {
     const { user } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const result = await Login.unlockUser(user);
@@ -236,6 +247,15 @@ const unlockUser = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'PROFILE_UNLOCK',
+            ip: req.ip,
+            module: 'PERFIL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} desbloqueo la cuenta del usuario ${user}`
+        });
 
         res.status(200).json({ message: `El usuario ${user} fue desbloqueado con éxito` });
     } catch (error) {
@@ -247,12 +267,13 @@ const unlockUser = async (req, res) => {
 const logoutUser = async (req, res) => {
     try {
         await logEvent({
-            id_usuario: req.user?.user || 'desconocido',
-            actividad: 'LOGOUT',
+            id_user: req.body.id_Perfil,
+            user: req.params.user,
+            activity: 'LOGOUT',
             ip: req.ip,
-            mac: os.hostname(),
-            detalle: 'Sesión cerrada por el usuario',
-            estado: 'OK'
+            module: 'LOGIN',
+            status: 'OK',
+            detail: 'Se cerro la sesión correctamente'
         });
 
         res.status(200).json({ message: 'Sesión cerrada correctamente' });

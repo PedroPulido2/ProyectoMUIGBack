@@ -14,7 +14,7 @@ async function subirImagenADrive(file, idCarpetaDrive, newName) {
     try {
         const filePath = file.path;
         const originalExtension = path.extname(file.originalname); // Obtener extensión original
-        
+
         // Evitar extensión duplicada
         const newFileName = newName.endsWith(originalExtension) ? newName : `${newName}${originalExtension}`;
         const newFilePath = path.join(path.dirname(filePath), newFileName);
@@ -80,7 +80,7 @@ async function actualizarNombreImagenDrive(fileId, newName) {
     }
 }
 
-async function moverImagenDrive(fileId, oldFolderId, newFolderId){
+async function moverImagenDrive(fileId, oldFolderId, newFolderId) {
     try {
         // Quitar la imagen de la carpeta anterior
         await drive.files.update({
@@ -92,9 +92,23 @@ async function moverImagenDrive(fileId, oldFolderId, newFolderId){
         console.log(`Imagen ${fileId} movida a la nueva carpeta ${newFolderId}`);
     } catch (error) {
         console.error('Error al mover la imagen en Google Drive:', error.message);
-        throw error;
+        throw new error;
     }
 }
 
+async function protegerArchivoDrive(fileId) {
+    try {
+        await drive.permissions.create({
+            fileId: fileId,
+            requestBody: {
+                role: 'reader',
+                type: 'anyone',
+            },
+        });
+    } catch (error) {
+        console.error('Error al proteger el archivo en Google Drive:', error.message);
+        throw new error;
+    }
+}
 
-module.exports = { subirImagenADrive, eliminarImagenDeDrive, actualizarNombreImagenDrive, moverImagenDrive };
+module.exports = { subirImagenADrive, eliminarImagenDeDrive, actualizarNombreImagenDrive, moverImagenDrive, protegerArchivoDrive };

@@ -3,6 +3,7 @@ require('dotenv').config();
 const Roca = require('../models/rocaModel');
 const driveServices = require('../services/driveServices');
 const id_Carpeta_Drive = process.env.ID_CARPETA_DRIVE_ROCAS;
+const { logEvent } = require('../middlewares/logger');
 
 /**
  * Controlador Roca
@@ -37,7 +38,7 @@ const crearRoca = async (req, res) => {
     var FOTO = '';
 
     const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
-        MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION } = req.body;
+        MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         // Verificar si el ID ya existe en la base de datos
@@ -59,6 +60,17 @@ const crearRoca = async (req, res) => {
         }
 
         await Roca.crearRoca(rocaData);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'ROCA_CREATE',
+            ip: req.ip,
+            module: 'ROCA',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} registro una nueva roca con id: ${ID_ROCA}`
+        });
+
         res.status(201).json({ message: 'Datos de la roca registrados correctamente' });
     } catch (error) {
         console.error('Error al registrar la roca:', error.message);
@@ -71,7 +83,7 @@ const actualizarRoca = async (req, res) => {
 
     const { ID_ROCAPARAM } = req.params;
     const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
-        MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION } = req.body;
+        MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const roca = await Roca.obtenerRocaPorId(ID_ROCAPARAM);
@@ -116,6 +128,17 @@ const actualizarRoca = async (req, res) => {
         }
 
         await Roca.actualizarRoca(ID_ROCAPARAM, rocaData);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'ROCA_UPDATE',
+            ip: req.ip,
+            module: 'ROCA',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} edito los datos de la roca con id: ${ID_ROCA}`
+        });
+
         res.status(200).json({ message: `Los datos de la roca ${ID_ROCA} fueron actualizados correctamente` });
     } catch (error) {
         console.error('Error al actualizar la roca:', error.message);
@@ -125,6 +148,7 @@ const actualizarRoca = async (req, res) => {
 
 const eliminarRoca = async (req, res) => {
     const { ID_ROCA } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Verificar si la roca existe en la base de datos
@@ -148,6 +172,17 @@ const eliminarRoca = async (req, res) => {
         }
 
         await Roca.eliminarRoca(ID_ROCA);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'ROCA_DELETE',
+            ip: req.ip,
+            module: 'ROCA',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} elimino los datos de la roca con id: ${ID_ROCA}`
+        });
+
         res.status(200).json({ message: `La roca fue eliminado correctamente` });
     } catch (error) {
         console.error('Error al eliminar la roca:', error.message);
@@ -157,6 +192,7 @@ const eliminarRoca = async (req, res) => {
 
 const eliminarFotoRoca = async (req, res) => {
     const { ID_ROCA } = req.params;
+    const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         const roca = await Roca.obtenerRocaPorId(ID_ROCA);
@@ -184,6 +220,17 @@ const eliminarFotoRoca = async (req, res) => {
         }
 
         await Roca.eliminarFotoRoca(ID_ROCA);
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'ROCA_IMAGE_DELETE',
+            ip: req.ip,
+            module: 'ROCA',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} elimino la imagen de la roca con id: ${ID_ROCA}`
+        });
+
         res.status(200).json({ message: `La imagen de la roca con ID ${ID_ROCA} fue eliminada correctamente` });
     } catch (error) {
         console.error('Error al eliminar la foto de la roca:', error.message);
