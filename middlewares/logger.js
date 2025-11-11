@@ -12,22 +12,22 @@ const logEvent = async (data) => {
     await fs.ensureDir(logDir);
     if (!fs.existsSync(logFile)) {
       await fs.writeFile(logFile, "");
-
-      const logEntry = {
-        DATE: new Date().toISOString(),
-        ID_USER: data.id_user || "anon",
-        USER: data.user || "anonimo",
-        ACTIVITY: data.activity,
-        IP: data.ip || "no_detectada",
-        SERVER_NAME: os.hostname(),
-        MODULE: data.module || "desconocido",
-        STATUS: data.status || "OK",
-        DETAIL: data.detail || "",
-      };
-
-      const encrypted = encrypt(JSON.stringify(logEntry));
-      await fs.appendFile(logFile, encrypted + "\n");
     }
+
+    const logEntry = {
+      DATE: new Date().toISOString(),
+      ID_USER: data.id_user || "anon",
+      USER: data.user || "anonimo",
+      ACTIVITY: data.activity,
+      IP: data.ip || "no_detectada",
+      SERVER_NAME: os.hostname(),
+      MODULE: data.module || "desconocido",
+      STATUS: data.status || "OK",
+      DETAIL: data.detail || "",
+    };
+
+    const encrypted = encrypt(JSON.stringify(logEntry));
+    await fs.appendFile(logFile, encrypted + "\n");
   } catch (err) {
     console.error("Error al registrar evento en log:", err.message);
   }

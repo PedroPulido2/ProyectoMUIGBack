@@ -2,3 +2,4 @@
 node_modules
 cached_images
 logs/*.log
+dist
