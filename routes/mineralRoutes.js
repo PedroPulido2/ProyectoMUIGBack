@@ -6,11 +6,11 @@ const upload = createUpload('ID_MINERAL');
 const auth = require('../middlewares/auth');
 
 //Rutas de los minerales
-router.get('/', auth, mineralController.obtenerTodosLosMinerales);
-router.get('/:ID_MINERAL', auth, mineralController.obtenerMineralPorId);
-router.post('/', auth, upload.single('FOTO'), mineralController.crearMineral);
-router.put('/:ID_MINERALPARAM', auth, upload.single('FOTO'), mineralController.actualizarMineral);
-router.delete('/:ID_MINERAL', auth, mineralController.borrarMineral);
-router.delete('/:ID_MINERAL/image', auth, mineralController.borrarImagenMineral);
+router.get('/', auth, mineralController.getAllMinerals);
+router.get('/:ID_MINERAL', auth, mineralController.getMineralById);
+router.post('/', auth, upload.single('FOTO'), mineralController.createMineral);
+router.put('/:ID_MINERALPARAM', auth, upload.single('FOTO'), mineralController.updateMineral);
+router.delete('/:ID_MINERAL', auth, mineralController.deleteMineral);
+router.delete('/:ID_MINERAL/image', auth, mineralController.deleteMineralPhoto);
 
 module.exports = router;

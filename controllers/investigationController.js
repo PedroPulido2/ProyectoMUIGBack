@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const Investigacion = require('../models/investigacionModelo');
+const InvestigationModel = require('../models/investigationModel');
 const driveServices = require('../services/driveServices');
 const id_Carpeta_Drive_Principal = process.env.ID_CARPETA_DRIVE_INVESTIGACION;
 const id_Carpeta_Drive_AFPC = process.env.ID_CARPETA_DRIVE_INVESTIGACION_AFPC;
@@ -13,31 +13,31 @@ const { logEvent } = require('../middlewares/logger');
  * En este archivo se definen los controladores asociados al manejo de investigaciones, se controlan los errores y solicitudes.
  */
 
-const obtenerInvestigaciones = async (req, res) => {
+const getAllInvestigations = async (req, res) => {
     try {
-        const investigaciones = await Investigacion.obtenerTodasLasInvestigaciones();
-        res.status(200).json(investigaciones);
+        const investigations = await InvestigationModel.getAll();
+        res.status(200).json(investigations);
     } catch (error) {
-        console.error('Error al obtener todas las investigaciónes:', error.message);
+        console.error('Error al obtener las investigaciónes:', error.message);
         res.status(500).json({ error: 'Error al obtener las investigaciones' });
     }
 };
 
-const obtenerInvestigacionPorId = async (req, res) => {
+const getInvestigationById = async (req, res) => {
     const { ID_PIEZA } = req.params;
     try {
-        const investigacion = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
-        if (investigacion.length === 0) {
+        const investigation = await InvestigationModel.findById(ID_PIEZA);
+        if (investigation.length === 0) {
             return res.status(404).json({ error: 'El ID de investigacion no existe' });
         }
-        res.status(200).json(investigacion);
+        res.status(200).json(investigation);
     } catch (error) {
         console.error('Error al obtener la investigación:', error.message);
-        res.status(500).json({ error: 'Error al obtener los datos de la tabla investigacion' });
+        res.status(500).json({ error: 'Error al obtener la investigación' });
     }
 };
 
-const crearInvestigacion = async (req, res) => {
+const createInvestigation = async (req, res) => {
     var FOTO = '';
 
     const { ID_PIEZA, COLECCION, REPOSITORIO, FILO, SUBFILO, CLASE, ORDEN, FAMILIA, GENERO, NOMBRE, PERIODO_GEOLOGICO,
@@ -45,7 +45,7 @@ const crearInvestigacion = async (req, res) => {
 
     try {
         // Verificar si el ID ya existe en la base de datos
-        const investigacion = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
+        const investigacion = await InvestigationModel.findById(ID_PIEZA);
 
         // Si ya existe, devolver un error sin subir la imagen
         if (investigacion.length > 0) {
@@ -54,11 +54,11 @@ const crearInvestigacion = async (req, res) => {
         //Subir imagen a Google Drive
         if (req.file) {
             if (/^MGUPTC-CPi-HRR-\d{3}$/.test(ID_PIEZA)) {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_HRR, ID_PIEZA);
+                FOTO = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive_HRR, ID_PIEZA);
             } else if (/^MGUPTC-CPi-AFPC-\d{4}[A-Za-z]?$/.test(ID_PIEZA)) {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_AFPC, ID_PIEZA);
+                FOTO = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive_AFPC, ID_PIEZA);
             } else {
-                FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive_Principal, ID_PIEZA);
+                FOTO = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive_Principal, ID_PIEZA);
             }
         }
 
@@ -67,7 +67,7 @@ const crearInvestigacion = async (req, res) => {
             ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, FOTO
         };
 
-        await Investigacion.crearInvestigacion(investigacionData);
+        await InvestigationModel.create(investigacionData);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -82,11 +82,11 @@ const crearInvestigacion = async (req, res) => {
         res.status(201).json({ message: 'Los Datos de la nueva investigacion registrados correctamente' });
     } catch (error) {
         console.error('Error al crear la investigación:', error.message);
-        res.status(500).json({ error: 'Error al obtener los datos de la investigación' });
+        res.status(500).json({ error: 'Error al crear la investigación' });
     }
 };
 
-const actualizarInformacion = async (req, res) => {
+const updateInvestigation = async (req, res) => {
     var FOTO = '';
 
     const { ID_PIEZAPARAM } = req.params;
@@ -94,8 +94,8 @@ const actualizarInformacion = async (req, res) => {
         ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, idPerfilAccion, usernameAccion } = req.body;
 
     try {
-        const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZAPARAM);
-        const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZAPARAM);
+        const pieza = await InvestigationModel.findById(ID_PIEZAPARAM);
+        const urlFoto = await InvestigationModel.getPhoto(ID_PIEZAPARAM);
         let currentFotoUrl = null;
         let currentFileId = null;
         let currentFolderId = null;
@@ -133,23 +133,23 @@ const actualizarInformacion = async (req, res) => {
 
         if (req.file) {
             if (currentFileId) {
-                await driveServices.eliminarImagenDeDrive(currentFileId);
+                await driveServices.deleteFileToDrive(currentFileId);
             }
-            FOTO = await driveServices.subirImagenADrive(req.file, newFolderId, ID_PIEZA);
+            FOTO = await driveServices.uploadFileToDrive(req.file, newFolderId, ID_PIEZA);
         } else {
             FOTO = currentFotoUrl;
             if (ID_PIEZA !== ID_PIEZAPARAM) {
-                const piezaExistente = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
+                const piezaExistente = await InvestigationModel.findById(ID_PIEZA);
                 if (piezaExistente.length > 0) {
                     return res.status(400).json({ error: `El ID_PIEZA: ${ID_PIEZA} ya está en uso` });
                 }
 
                 if (currentFileId) {
-                    await driveServices.actualizarNombreImagenDrive(currentFileId, ID_PIEZA);
+                    await driveServices.updateFileNameToDrive(currentFileId, ID_PIEZA);
 
                     // **Mover la imagen a la nueva carpeta si es necesario**
                     if (currentFolderId !== newFolderId) {
-                        await driveServices.moverImagenDrive(currentFileId, currentFolderId, newFolderId);
+                        await driveServices.moveFileToDrive(currentFileId, currentFolderId, newFolderId);
                     }
                 }
             }
@@ -160,7 +160,7 @@ const actualizarInformacion = async (req, res) => {
             ERA_GEOLOGICA, FORMACION_GEOLOGICA, SECCION_ESTRATIGRAFICA, COLECTOR, LOCALIDAD, OBSERVACIONES, FOTO
         };
 
-        await Investigacion.actualizarInvestigacion(ID_PIEZAPARAM, investigacionData);
+        await InvestigationModel.update(ID_PIEZAPARAM, investigacionData);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -179,33 +179,33 @@ const actualizarInformacion = async (req, res) => {
     }
 };
 
-const borrarInvestigacion = async (req, res) => {
+const deleteInvestigation = async (req, res) => {
     const { ID_PIEZA } = req.params;
     const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Verificar si la pieza existe en la base de datos
-        const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
+        const pieza = await InvestigationModel.findById(ID_PIEZA);
         if (!pieza || pieza.length === 0) {
             return res.status(404).json({ error: `El ID_PIEZA: ${ID_PIEZA} no fue encontrado.` });
         }
 
         //Obtener la imagen actual desde la BD
-        const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZA);
-        let currentFotoUrl = null;
+        const urlPhoto = await InvestigationModel.getPhoto(ID_PIEZA);
+        let currentUrlPhoto = null;
         let currentFileId = null;
 
-        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
-            currentFotoUrl = urlFoto[0].FOTO;
-            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        if (urlPhoto.length > 0 && urlPhoto[0].FOTO) {
+            currentUrlPhoto = urlPhoto[0].FOTO;
+            currentFileId = currentUrlPhoto.split('/d/')[1]?.split('/')[0] || null;
         }
 
         // Eliminar la imagen de Google Drive
         if (currentFileId) {
-            await driveServices.eliminarImagenDeDrive(currentFileId);
+            await driveServices.deleteFileToDrive(currentFileId);
         }
 
-        await Investigacion.eliminarInvestigacion(ID_PIEZA);
+        await InvestigationModel.delete(ID_PIEZA);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -224,15 +224,15 @@ const borrarInvestigacion = async (req, res) => {
     }
 };
 
-const borrarImagenInvestigacion = async (req, res) => {
+const deleteInvestigationPhoto = async (req, res) => {
     const { ID_PIEZA } = req.params;
     const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
-        const pieza = await Investigacion.obteneInvestigacionPorId(ID_PIEZA);
+        const pieza = await InvestigationModel.findById(ID_PIEZA);
 
         // Obtener la URL de la imagen actual de la pieza desde la base de datos
-        const urlFoto = await Investigacion.obtenerFotoInvestigacion(ID_PIEZA);
+        const urlFoto = await InvestigationModel.getPhoto(ID_PIEZA);
         let currentFotoUrl = null;
         let currentFileId = null;
 
@@ -251,11 +251,11 @@ const borrarImagenInvestigacion = async (req, res) => {
 
         // Eliminar la imagen de Google Drive
         if (currentFileId) {
-            await driveServices.eliminarImagenDeDrive(currentFileId);
+            await driveServices.deleteFileToDrive(currentFileId);
         }
 
         // Actualizar el campo FOTO a NULL en la base de datos
-        await Investigacion.eliminarFotoInvestigacion(ID_PIEZA);
+        await InvestigationModel.deletePhoto(ID_PIEZA);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -274,4 +274,4 @@ const borrarImagenInvestigacion = async (req, res) => {
     }
 };
 
-module.exports = { obtenerInvestigaciones, obtenerInvestigacionPorId, crearInvestigacion, actualizarInformacion, borrarImagenInvestigacion, borrarInvestigacion }
+module.exports = { getAllInvestigations, getInvestigationById, createInvestigation, updateInvestigation, deleteInvestigation, deleteInvestigationPhoto };

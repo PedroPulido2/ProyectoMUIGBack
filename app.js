@@ -7,12 +7,12 @@ var cors = require('cors');
 
 var indexRouter = require('./routes/index');
 const loginRouter = require('./routes/loginRoutes');
-const fosilRouter = require('./routes/fosilRoutes');
-const investigacionRouter = require('./routes/investigacionRoutes');
+const fosilRouter = require('./routes/fossilRoutes');
+const investigacionRouter = require('./routes/investigationRoutes');
 const mineralRouter = require('./routes/mineralRoutes');
-const rocaRouter = require('./routes/rocaRoutes');
-const perfilRouter = require('./routes/perfilRoute');
-const imagenRouter = require('./routes/imagenRouter');
+const rocaRouter = require('./routes/rockRoutes');
+const perfilRouter = require('./routes/profileRoutes');
+const imagenRouter = require('./routes/photoRoutes');
 const logRoutes = require('./routes/logRoutes');
 
 var app = express();
@@ -42,6 +42,7 @@ app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.set('trust proxy', true);
 
 // Aquí servimos solo la carpeta dist (el build de Vite)
 app.use(express.static(path.join(__dirname, 'dist')));

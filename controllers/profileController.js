@@ -1,9 +1,9 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
 
-const Perfil = require('../models/perfilModel');
+const profileModel = require('../models/profileModel');
 const driveServices = require('../services/driveServices');
-const Login = require('../models/loginModel');
+const loginModel = require('../models/loginModel');
 const id_Carpeta_Drive = process.env.ID_CARPETA_PERFIL;
 const { logEvent } = require('../middlewares/logger');
 
@@ -14,10 +14,10 @@ const { logEvent } = require('../middlewares/logger');
 
 const getAllProfiles = async (req, res) => {
     try {
-        const perfiles = await Perfil.getAllProfiles();
+        const perfiles = await profileModel.getAll();
         res.status(200).json(perfiles);
     } catch (error) {
-        console.error('Error al obtener todos los perfiles:', error.message);
+        console.error('Error al obtener los perfiles:', error.message);
         res.status(500).json({ error: 'Error al obtener los perfiles' });
     }
 };
@@ -25,13 +25,13 @@ const getAllProfiles = async (req, res) => {
 const getProfileById = async (req, res) => {
     const { id_Perfil } = req.params;
     try {
-        const perfil = await Perfil.getProfileById(id_Perfil);
+        const perfil = await profileModel.getById(id_Perfil);
         if (perfil.length === 0) {
             return res.status(404).json({ error: 'El ID del perfil no existe' });
         }
         res.status(200).json(perfil);
     } catch (error) {
-        console.error('Error al obtener todos los perfiles:', error.message);
+        console.error('Error al obtener los perfiles:', error.message);
         res.status(500).json({ error: 'Error al obtener los perfiles' });
     }
 };
@@ -42,7 +42,7 @@ const createProfile = async (req, res) => {
 
     try {
         //Verificar si el ID ya existe en la base de datos
-        const perfil = await Perfil.getProfileById(id_Perfil);
+        const perfil = await profileModel.getById(id_Perfil);
 
         // Si ya existe, devolver un error sin subir la imagen
         if (perfil.length > 0) {
@@ -50,14 +50,14 @@ const createProfile = async (req, res) => {
         }
 
         //Se verifica si el user existe en la tabla login
-        const userExist = await Login.getLoginByUser(user);
+        const userExist = await loginModel.getByUser(user);
         if (userExist.length > 0) {
             return res.status(400).json({ error: 'El nombre de usuario ya esta en uso' });
         }
 
         //Subir imagen a Google Drive si se selecciono una imagen
         if (req.file) {
-            foto = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, id_Perfil);
+            foto = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive, id_Perfil);
         }
         const perfilData = {
             id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo,
@@ -68,8 +68,8 @@ const createProfile = async (req, res) => {
         const hashedPassword = await generateHashedPassword(password);
 
         //Realiza la subida de los datos
-        await Perfil.createProfile(perfilData);
-        await Login.createLogin(user, hashedPassword, id_Perfil);
+        await profileModel.create(perfilData);
+        await loginModel.create(user, hashedPassword, id_Perfil);
 
         if (typeof usernameAccion !== 'undefined' && usernameAccion !== null) {
             await logEvent({
@@ -95,7 +95,7 @@ const createProfile = async (req, res) => {
 
         res.status(201).json({ message: 'Datos del perfil fueron registrados correctamente' });
     } catch (error) {
-        console.error('Error al crear el perfil:', error.message);
+        console.error('Error al insertar los datos del perfil:', error.message);
         res.status(500).json({ error: 'Error al insertar los datos del perfil' });
     }
 };
@@ -106,14 +106,14 @@ const updateProfile = async (req, res) => {
         const { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, user, password, isAdmin, estado, idPerfilAccion, usernameAccion } = req.body;
         let foto = '';
 
-        const idPerfilData = await Login.getLoginByIdPerfil(id_PerfilPARAM);
+        const idPerfilData = await loginModel.getByIdPerfil(id_PerfilPARAM);
         const estadoAnterior = idPerfilData[0].estado;
 
-        const perfil = await Perfil.getProfileById(id_PerfilPARAM);
+        const perfil = await profileModel.getById(id_PerfilPARAM);
         const isAdminAnterior = perfil[0].isAdmin;
 
         // Obtener la imagen actual desde la BD
-        const urlFoto = await Perfil.getImageProfile(id_PerfilPARAM);
+        const urlFoto = await profileModel.getImage(id_PerfilPARAM);
 
         // Verificar si el perfil existe antes de acceder a los datos
         if (!urlFoto.length) {
@@ -125,26 +125,26 @@ const updateProfile = async (req, res) => {
         // Subir nueva imagen si se proporciona
         if (req.file) {
             if (currentFileId) {
-                await driveServices.eliminarImagenDeDrive(currentFileId);
+                await driveServices.deleteFileToDrive(currentFileId);
             }
-            foto = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, id_Perfil);
+            foto = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive, id_Perfil);
         } else {
             foto = currentFotoUrl;
             if (id_Perfil !== id_PerfilPARAM && currentFileId) {
-                await driveServices.actualizarNombreImagenDrive(currentFileId, id_Perfil);
+                await driveServices.updateFileNameToDrive(currentFileId, id_Perfil);
             }
         }
 
         // Verificar si el usuario ya existe en la tabla login
-        const userExist = await Login.getLoginByIdPerfil(id_PerfilPARAM);
+        const userExist = await loginModel.getByIdPerfil(id_PerfilPARAM);
 
         if (userExist[0].user !== user && user) {
-            await Login.updateUser(user, id_Perfil);
+            await loginModel.updateUser(user, id_Perfil);
         }
 
         if (password && password.trim() !== '') {
             const hashedPassword = await generateHashedPassword(password);
-            await Login.updatePassword(user, hashedPassword);
+            await loginModel.updatePassword(user, hashedPassword);
 
             if (typeof usernameAccion !== 'undefined' && usernameAccion !== null) {
                 await logEvent({
@@ -172,11 +172,11 @@ const updateProfile = async (req, res) => {
         // Datos del perfil a actualizar
         const perfilData = { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, foto, isAdmin };
 
-        await Perfil.updateProfile(id_PerfilPARAM, perfilData);
+        await profileModel.update(id_PerfilPARAM, perfilData);
 
         if (estado && estado !== estadoAnterior) {
             if (estado === 'BLOQUEADO') {
-                await Login.blockuser(user);
+                await loginModel.blockuser(user);
                 await logEvent({
                     id_user: idPerfilAccion,
                     user: usernameAccion,
@@ -187,7 +187,7 @@ const updateProfile = async (req, res) => {
                     detail: `El usuario: ${usernameAccion} bloqueó la cuenta del usuario: ${user}`
                 });
             } else if (estado === 'ACTIVO') {
-                await Login.unlockUser(user);
+                await loginModel.unlockUser(user);
                 await logEvent({
                     id_user: idPerfilAccion,
                     user: usernameAccion,
@@ -273,24 +273,24 @@ const deleteProfile = async (req, res) => {
 
     try {
         //Obtener la imagen actual desde la BD
-        const urlFoto = await Perfil.getImageProfile(id_Perfil);
-        const currentFotoUrl = urlFoto[0].foto;
-        const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        const urlPhoto = await profileModel.getImage(id_Perfil);
+        const currentUrlPhoto = urlPhoto[0].foto;
+        const currentFileId = currentUrlPhoto.split('/d/')[1]?.split('/')[0] || null;
 
-        if (urlFoto.length === 0) {
+        if (urlPhoto.length === 0) {
             return res.status(404).json({ error: `El numero de documento del perfil: ${id_Perfil} no fue encontrado u registrado` });
         }
 
         // Eliminar la imagen de Google Drive
         if (currentFileId) {
-            await driveServices.eliminarImagenDeDrive(currentFileId);
+            await driveServices.deleteFileToDrive(currentFileId);
         }
 
-        const dataUser = await Login.getLoginByIdPerfil(id_Perfil);
+        const dataUser = await loginModel.getByIdPerfil(id_Perfil);
         const user = dataUser[0].user;
 
-        await Login.deleteLogin(user);
-        await Perfil.deleteProfile(id_Perfil);
+        await loginModel.delete(user);
+        await profileModel.delete(id_Perfil);
 
         if (usernameAccion !== user) {
             await logEvent({
@@ -316,18 +316,18 @@ const deleteProfile = async (req, res) => {
 
         res.status(200).json({ message: `El perfil fue eliminado correctamente` });
     } catch (error) {
-        console.error('Error al eliminar el perfil:', error.message);
+        console.error('Error al eliminar los datos del perfil:', error.message);
         res.status(500).json({ error: 'Error al eliminar los datos del perfil' });
     }
 };
 
-const deleteImageProfile = async (req, res) => {
+const deleteProfilePhoto = async (req, res) => {
     const { id_Perfil } = req.params;
     const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         // Obtener la URL de la imagen actual del perfil desde la base de datos
-        const urlFoto = await Perfil.getProfileById(id_Perfil);
+        const urlFoto = await profileModel.getById(id_Perfil);
         const currentFotoUrl = urlFoto[0].foto;
         const currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
 
@@ -341,10 +341,10 @@ const deleteImageProfile = async (req, res) => {
 
         // Eliminar la imagen de Google Drive
         if (currentFileId) {
-            await driveServices.eliminarImagenDeDrive(currentFileId);
+            await driveServices.deleteFileToDrive(currentFileId);
         }
 
-        await Perfil.deleteImageProfile(id_Perfil);
+        await profileModel.deleteImage(id_Perfil);
 
         if (idPerfilAccion !== id_Perfil) {
             await logEvent({
@@ -379,11 +379,11 @@ const getImageandRolProfile = async (req, res) => {
     try {
         const { id_Perfil } = req.params;
 
-        const rol = await Perfil.getProfileById(id_Perfil);
-        const urlFoto = await Perfil.getImageProfile(id_Perfil);
-        const currentFotoUrl = urlFoto[0].foto;
+        const rol = await profileModel.getById(id_Perfil);
+        const urlPhoto = await profileModel.getImage(id_Perfil);
+        const currentUrlPhoto = urlPhoto[0].foto;
 
-        res.status(200).json({ fotoProfile: currentFotoUrl, isAdmin: rol[0].isAdmin });
+        res.status(200).json({ fotoProfile: currentUrlPhoto, isAdmin: rol[0].isAdmin });
     } catch (error) {
         console.error('Error al obtener la foto del perfil:', error.message);
         res.status(500).json({ error: 'Error al obtener la foto del perfil' });
@@ -407,4 +407,4 @@ const generateHashedPassword = async (password) => {
     return hashedPassword;
 };
 
-module.exports = { getAllProfiles, getProfileById, createProfile, updateProfile, deleteProfile, deleteImageProfile, getImageandRolProfile }
+module.exports = { getAllProfiles, getProfileById, createProfile, updateProfile, deleteProfile, deleteProfilePhoto, getImageandRolProfile }

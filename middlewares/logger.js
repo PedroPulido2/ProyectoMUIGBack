@@ -47,34 +47,54 @@ const getLogs = async (req, res) => {
 const uploadLogToDrive = async (req, res) => {
   try {
     if (!fs.existsSync(logFile)) {
-      console.log("No hay archivo de logs para subir.");
+      console.log("No hay archivo de logs local para subir.");
       return;
     }
 
     const timestamp = new Date().toISOString().slice(0, 10);
-    const tempPath = path.join(os.tmpdir(), `system_${timestamp}.log`);
+    const fileName = `system_${timestamp}.log`;
+    const tempPath = path.join(os.tmpdir(), fileName);
 
     await fs.copyFile(logFile, tempPath);
 
-    const file = {
-      path: tempPath,
-      originalname: `system_${timestamp}.log`,
-      mimetype: "text/plain",
-    };
+    const folderId = process.env.ID_CARPETA_DRIVE_LOG;
 
-    const driveUrl = await driveServices.subirImagenADrive(
-      file,
-      process.env.ID_CARPETA_DRIVE_LOG,
-      `system_${timestamp}.log`
-    );
+    const existingFileId = await driveServices.searchFileInDrive(fileName, folderId);
 
+    let driveResultUrl = "";
 
-    const fileId = driveUrl.split("/d/")[1].split("/")[0];
-    await driveServices.protegerArchivoDrive(fileId);
-    console.log("Logs subidos a Google Drive:", driveUrl);
-    res.status(200).json({ message: "Logs subidos correctamente" });
+    if (existingFileId) {
+      //Actualizar
+      await driveServices.updateFileContent(existingFileId, tempPath, "text/plain");
+      driveResultUrl = `https://drive.google.com/file/d/${existingFileId}`;
+    } else {
+      //Crear nuevo del dia
+      const file = {
+        path: tempPath,
+        originalname: fileName,
+        mimetype: "text/plain",
+      };
+
+      driveResultUrl = await driveServices.uploadFileToDrive(
+        file,
+        folderId,
+        fileName.replace(".log", "")
+      );
+      const newFileId = driveResultUrl.split("/d/")[1].split("/")[0];
+      await driveServices.protectFileInDrive(newFileId);
+    }
+
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+
+    if (res) {
+      res.status(200).json({ message: "Logs sincronizados correctamente", url: driveResultUrl });
+    }
+
   } catch (error) {
-    console.error("Error al subir logs a Google Drive:", error.message);
+    console.error("Error al sincronizar logs con Google Drive:", error.message);
+    if (res && !res.headersSent) {
+      res.status(500).json({ error: "Error interno al subir logs" });
+    }
   }
 };
 
@@ -97,4 +117,4 @@ module.exports = { logEvent, getLogs, uploadLogToDrive, uploadLog };
 
 setInterval(() => {
   uploadLogToDrive();
-}, 3600000); // cada 1 hora
+}, 600000); // 10 minutos (10 * 60 * 1000)

@@ -5,18 +5,18 @@ const db = require('../config/bd');
  * En este archivo se almacenan metodos para las diferentes consultas a la base de datos.
  */
 
-const Mineral = {
-    async obtenerTodosLosMinerales() {
+const MineralModel = {
+    async getAll() {
         const [rows] = await db.query('SELECT * FROM mineral');
         return rows;
     },
 
-    async obtenerMineralPorId(ID_MINERAL) {
+    async getById(ID_MINERAL) {
         const [row] = await db.query('SELECT * FROM mineral WHERE ID_MINERAL = ?', [ID_MINERAL]);
         return row;
     },
 
-    async crearMineral(data) {
+    async create(data) {
         const { ID_MINERAL, N_BARRANTES, COLECCION, NOMBRE_MINERAL, CANTIDAD, GRUPO_MINERALOGICO, REGION, SUBGRUPO, COMPOSICION,
             CARACTERISTICAS, COLECTOR, OBSERVACIONES, UBICACION, FOTO } = data;
 
@@ -28,7 +28,7 @@ const Mineral = {
         return result;
     },
 
-    async actualizarMineral(ID_MINERALPARAM, data) {
+    async update(ID_MINERALPARAM, data) {
         const { ID_MINERAL, N_BARRANTES, COLECCION, NOMBRE_MINERAL, CANTIDAD, GRUPO_MINERALOGICO, REGION, SUBGRUPO, COMPOSICION,
             CARACTERISTICAS, COLECTOR, OBSERVACIONES, UBICACION, FOTO } = data;
 
@@ -40,20 +40,20 @@ const Mineral = {
         return result;
     },
 
-    async eliminarMineral(ID_MINERAL) {
+    async delete(ID_MINERAL) {
         const [result] = await db.query('DELETE FROM mineral WHERE ID_MINERAL = ?', [ID_MINERAL]);
         return result;
     },
 
-    async eliminarFotoMineral(ID_MINERAL) {
+    async deletePhoto(ID_MINERAL) {
         const [result] = await db.query('UPDATE mineral SET FOTO = "" WHERE ID_MINERAL = ?', [ID_MINERAL]);
         return result;
     },
 
-    async obtenerFotoMineral(ID_MINERAL) {
+    async getPhoto(ID_MINERAL) {
         const [result] = await db.query('SELECT FOTO FROM mineral WHERE ID_MINERAL = ?', [ID_MINERAL]);
         return result;
     }
 };
 
-module.exports = Mineral;
+module.exports = MineralModel;

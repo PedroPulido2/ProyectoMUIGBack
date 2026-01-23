@@ -1,8 +1,8 @@
 require('dotenv').config();
 
-const Roca = require('../models/rocaModel');
+const rocaModel = require('../models/rockModel');
 const driveServices = require('../services/driveServices');
-const id_Carpeta_Drive = process.env.ID_CARPETA_DRIVE_ROCAS;
+const rockDriveFolderId = process.env.ID_CARPETA_DRIVE_ROCAS;
 const { logEvent } = require('../middlewares/logger');
 
 /**
@@ -10,9 +10,9 @@ const { logEvent } = require('../middlewares/logger');
  * En este archivo se definen los controladores asociados al manejo de rocas, se controlan los errores y solicitudes.
  */
 
-const obtenerTodasLasRocas = async (req, res) => {
+const getAllRocks = async (req, res) => {
     try {
-        const rocas = await Roca.obtenerTodasLasRocas();
+        const rocas = await rocaModel.findAll();
         res.status(200).json(rocas);
     } catch (error) {
         console.error('Error al obtener todas las rocas:', error.message);
@@ -20,10 +20,10 @@ const obtenerTodasLasRocas = async (req, res) => {
     }
 };
 
-const obtenerRocaPorId = async (req, res) => {
+const getRockById = async (req, res) => {
     const { ID_ROCA } = req.params;
     try {
-        const roca = await Roca.obtenerRocaPorId(ID_ROCA);
+        const roca = await rocaModel.findById(ID_ROCA);
         if (roca.length === 0) {
             return res.status(404).json({ error: 'El ID de la roca no existe' });
         }
@@ -34,7 +34,7 @@ const obtenerRocaPorId = async (req, res) => {
     }
 };
 
-const crearRoca = async (req, res) => {
+const createRock = async (req, res) => {
     var FOTO = '';
 
     const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
@@ -42,7 +42,7 @@ const crearRoca = async (req, res) => {
 
     try {
         // Verificar si el ID ya existe en la base de datos
-        const roca = await Roca.obtenerRocaPorId(ID_ROCA);
+        const roca = await rocaModel.findById(ID_ROCA);
 
         // Si ya existe, devolver un error sin subir la imagen
         if (roca.length > 0) {
@@ -51,7 +51,7 @@ const crearRoca = async (req, res) => {
 
         //Subir imagen a Google Drive
         if (req.file) {
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_ROCA);
+            FOTO = await driveServices.uploadFileToDrive(req.file, rockDriveFolderId, ID_ROCA);
         }
 
         const rocaData = {
@@ -59,7 +59,7 @@ const crearRoca = async (req, res) => {
             MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, FOTO
         }
 
-        await Roca.crearRoca(rocaData);
+        await rocaModel.create(rocaData);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -78,7 +78,7 @@ const crearRoca = async (req, res) => {
     }
 };
 
-const actualizarRoca = async (req, res) => {
+const updateRock = async (req, res) => {
     var FOTO = '';
 
     const { ID_ROCAPARAM } = req.params;
@@ -86,9 +86,9 @@ const actualizarRoca = async (req, res) => {
         MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, idPerfilAccion, usernameAccion } = req.body;
 
     try {
-        const roca = await Roca.obtenerRocaPorId(ID_ROCAPARAM);
+        const roca = await rocaModel.findById(ID_ROCAPARAM);
         //Obtener la imagen actual desde la BD
-        const urlFoto = await Roca.obtenerFotoRoca(ID_ROCAPARAM);
+        const urlFoto = await rocaModel.getPhoto(ID_ROCAPARAM);
         let currentFotoUrl = null;
         let currentFileId = null;
 
@@ -104,20 +104,20 @@ const actualizarRoca = async (req, res) => {
         //Subir imagen a Google Drive si se proporciona un archivo
         if (req.file) {
             if (currentFileId) {
-                await driveServices.eliminarImagenDeDrive(currentFileId);
+                await driveServices.deleteFileToDrive(currentFileId);
             }
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_ROCA);
+            FOTO = await driveServices.uploadFileToDrive(req.file, rockDriveFolderId, ID_ROCA);
         } else {
             FOTO = currentFotoUrl; //Mantener la imagen actual si no se proporciona una nueva
 
             //Si se cambia el ID_ROCA entonces el nombre del archivo relacionado tambien cambia
             if (ID_ROCA !== ID_ROCAPARAM) {
-                const rocaExistente = await Roca.obtenerRocaPorId(ID_ROCA);
+                const rocaExistente = await rocaModel.findById(ID_ROCA);
                 if (rocaExistente.length > 0) {
                     return res.status(400).json({ error: `El ID_ROCA: ${ID_ROCA} ya está en uso` });
                 }
                 if (currentFileId) {
-                    await driveServices.actualizarNombreImagenDrive(currentFileId, ID_ROCA);
+                    await driveServices.updateFileNameToDrive(currentFileId, ID_ROCA);
                 }
             }
         }
@@ -127,7 +127,7 @@ const actualizarRoca = async (req, res) => {
             MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, FOTO, ID_ROCAPARAM
         }
 
-        await Roca.actualizarRoca(ID_ROCAPARAM, rocaData);
+        await rocaModel.update(ID_ROCAPARAM, rocaData);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -146,18 +146,18 @@ const actualizarRoca = async (req, res) => {
     }
 };
 
-const eliminarRoca = async (req, res) => {
+const deleteRock = async (req, res) => {
     const { ID_ROCA } = req.params;
     const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         //Verificar si la roca existe en la base de datos
-        const roca = await Roca.obtenerRocaPorId(ID_ROCA);
+        const roca = await rocaModel.findById(ID_ROCA);
         if (!roca || roca.length === 0) {
             return res.status(404).json({ error: `El ID de la roca ${ID_ROCA} no fue encontrado.` });
         }
         //Obtener la imagen actual desde la BD
-        const urlFoto = await Roca.obtenerFotoRoca(ID_ROCA);
+        const urlFoto = await rocaModel.getPhoto(ID_ROCA);
         let currentFotoUrl = null;
         let currentFileId = null;
 
@@ -168,10 +168,10 @@ const eliminarRoca = async (req, res) => {
 
         // Eliminar la imagen de Google Drive
         if (currentFileId) {
-            await driveServices.eliminarImagenDeDrive(currentFileId);
+            await driveServices.deleteFileToDrive(currentFileId);
         }
 
-        await Roca.eliminarRoca(ID_ROCA);
+        await rocaModel.delete(ID_ROCA);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -190,14 +190,14 @@ const eliminarRoca = async (req, res) => {
     }
 };
 
-const eliminarFotoRoca = async (req, res) => {
+const deleteRockPhoto = async (req, res) => {
     const { ID_ROCA } = req.params;
     const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
-        const roca = await Roca.obtenerRocaPorId(ID_ROCA);
+        const roca = await rocaModel.findById(ID_ROCA);
         // Obtener la URL de la imagen actual de la pieza desde la base de datos
-        const urlFoto = await Roca.obtenerFotoRoca(ID_ROCA);
+        const urlFoto = await rocaModel.getPhoto(ID_ROCA);
         let currentFotoUrl = null;
         let currentFileId = null;
 
@@ -216,10 +216,10 @@ const eliminarFotoRoca = async (req, res) => {
 
         // Eliminar la imagen de Google Drive
         if (currentFileId) {
-            await driveServices.eliminarImagenDeDrive(currentFileId);
+            await driveServices.deleteFileToDrive(currentFileId);
         }
 
-        await Roca.eliminarFotoRoca(ID_ROCA);
+        await rocaModel.deletePhoto(ID_ROCA);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -238,4 +238,4 @@ const eliminarFotoRoca = async (req, res) => {
     }
 };
 
-module.exports = { obtenerTodasLasRocas, obtenerRocaPorId, crearRoca, actualizarRoca, eliminarRoca, eliminarFotoRoca }
+module.exports = { getAllRocks, getRockById, createRock, updateRock, deleteRock, deleteRockPhoto };

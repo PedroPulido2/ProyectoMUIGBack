@@ -5,13 +5,13 @@ const db = require('../config/bd');
  * En este archivo se almacenan metodos para las diferentes consultas a la base de datos.
  */
 
-const Login = {
-    async getAllLogins() {
+const LoginModel = {
+    async getAll() {
         const [rows] = await db.query('SELECT user, id_Perfil, estado, intentos_fallidos FROM login');
         return rows;
     },
 
-    async createLogin(user, hashedPassword, idProfile) {
+    async create(user, hashedPassword, idProfile) {
         const [result] = await db.query('INSERT INTO login (user, password, id_Perfil, estado, intentos_fallidos) VALUES (?,?,?,?,?)',
             [user, hashedPassword, idProfile, 'ACTIVO', 0]
         );
@@ -25,17 +25,17 @@ const Login = {
         return result;
     },
 
-    async deleteLogin(user) {
+    async delete(user) {
         const [result] = await db.query('DELETE FROM login WHERE user = ?', [user]);
         return result;
     },
 
-    async getLoginByUser(user) {
+    async getByUser(user) {
         const [row] = await db.query('SELECT login.id_Perfil, user , password, isAdmin, foto, estado, intentos_fallidos FROM login INNER JOIN perfil USING (id_Perfil) WHERE user = ?', [user]);
         return row;
     },
 
-    async getLoginByIdPerfil(id_Perfil) {
+    async getByIdPerfil(id_Perfil) {
         const [row] = await db.query('SELECT * FROM login WHERE id_Perfil = ?', [id_Perfil]);
         return row;
     },
@@ -81,4 +81,4 @@ const Login = {
     }
 };
 
-module.exports = Login;
+module.exports = LoginModel;

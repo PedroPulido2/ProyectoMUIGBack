@@ -5,18 +5,18 @@ const db = require('../config/bd');
  * En este archivo se almacenan metodos para las diferentes consultas a la base de datos.
  */
 
-const Roca = {
-    async obtenerTodasLasRocas() {
+const RocaModel = {
+    async findAll() {
         const [rows] = await db.query('SELECT * FROM roca');
         return rows;
     },
 
-    async obtenerRocaPorId(ID_ROCA) {
+    async findById(ID_ROCA) {
         const [row] = await db.query('SELECT * FROM roca WHERE ID_ROCA = ?', [ID_ROCA]);
         return row;
     },
 
-    async crearRoca(data) {
+    async create(data) {
         const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
             MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, FOTO } = data;
 
@@ -27,7 +27,7 @@ const Roca = {
         return result;
     },
 
-    async actualizarRoca(ID_ROCAPARAM, data) {
+    async update(ID_ROCAPARAM, data) {
         const { ID_ROCA, N_BARRANTES, OTROS, BD_C_VARGAS, TIPO, COLECCION, NOMBRE_PIEZA, DEPARTAMENTO,
             MUNICIPIO, COLECTOR_DONADOR, CARACTERISTICAS, OBSERVACIONES, UBICACION, FOTO } = data;
 
@@ -38,20 +38,20 @@ const Roca = {
         return result;
     },
 
-    async eliminarRoca(ID_ROCA) {
+    async delete(ID_ROCA) {
         const [result] = await db.query('DELETE FROM roca WHERE ID_ROCA = ?', [ID_ROCA]);
         return result;
     },
 
-    async eliminarFotoRoca(ID_ROCA) {
+    async deletePhoto(ID_ROCA) {
         const [result] = await db.query('UPDATE roca SET FOTO = "" WHERE ID_ROCA = ?', [ID_ROCA]);
         return result;
     },
 
-    async obtenerFotoRoca(ID_ROCA) {
+    async getPhoto(ID_ROCA) {
         const [result] = await db.query('SELECT FOTO FROM roca WHERE ID_ROCA = ?', [ID_ROCA]);
         return result;
     }
 };
 
-module.exports = Roca;
+module.exports = RocaModel;

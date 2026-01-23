@@ -1,4 +1,4 @@
-const Login = require('../models/loginModel');
+const loginModel = require('../models/loginModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { logEvent } = require('../middlewares/logger');
@@ -13,7 +13,7 @@ const MAX_INTENTOS = 5; // Numero maximo de intentos fallidos antes de bloquear 
 
 const getAllLogins = async (req, res) => {
     try {
-        const users = await Login.getAllLogins();
+        const users = await loginModel.getAll();
         res.status(200).json(users);
     } catch (error) {
         console.error('Error al obtener credenciales de los usuarios:', error.message);
@@ -24,7 +24,7 @@ const getAllLogins = async (req, res) => {
 const getLoginByUser = async (req, res) => {
     const { user } = req.params;
     try {
-        const result = await Login.getLoginByUser(user);
+        const result = await loginModel.getByUser(user);
         if (result.length === 0) {
             return res.status(404).json({ error: 'El usuario no se encuentra registrado' });
         }
@@ -57,7 +57,7 @@ const createLogin = async (req, res) => {
             throw new Error('No se pudo generar el hash de la contraseña');
         }
 
-        await Login.createLogin(user, hashedPassword, id_Perfil);
+        await loginModel.create(user, hashedPassword, id_Perfil);
         res.status(201).json({ message: 'El usuario fue registrado con exito' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
@@ -68,6 +68,7 @@ const createLogin = async (req, res) => {
     }
 };
 
+//???????????????????????????????????????
 const updateLogin = async (req, res) => {
     const { userParam } = req.params;
     const { user, password, id_Perfil } = req.body;
@@ -77,7 +78,7 @@ const updateLogin = async (req, res) => {
         const salt = await bcrypt.genSalt(10); //genera un salt
         const hashedPassword = await bcrypt.hash(password, salt); //genera la constrasena cifrada
 
-        const result = await Login.updateLogin(user, hashedPassword, id_Perfil, userParam);
+        const result = await loginModel.updateLogin(user, hashedPassword, id_Perfil, userParam);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
@@ -92,7 +93,7 @@ const updateLogin = async (req, res) => {
 const deleteLogin = async (req, res) => {
     const { user } = req.params;
     try {
-        const result = await Login.deleteLogin(user);
+        const result = await loginModel.delete(user);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'El usuario no fue encontrado' });
@@ -108,7 +109,7 @@ const authUser = async (req, res) => {
     const { user, password } = req.body;
 
     try {
-        const row = await Login.getLoginByUser(user);
+        const row = await loginModel.getByUser(user);
 
         if (row.length === 0) {
             return res.status(401).json({ error: 'Usuario o contraseña incorrecto' });
@@ -133,11 +134,11 @@ const authUser = async (req, res) => {
         const isMatch = await bcrypt.compare(password, userData.password);
 
         if (!isMatch) {
-            await Login.increaseFailedAttempts(user, MAX_INTENTOS);
+            await loginModel.increaseFailedAttempts(user, MAX_INTENTOS);
             return res.status(401).json({ error: 'Usuario o contraseña incorrecto' });
         }
 
-        await Login.resetFailedAttempts(user);
+        await loginModel.resetFailedAttempts(user);
 
         // Generar el token JWT
         const token = jwt.sign(
@@ -159,13 +160,23 @@ const authUser = async (req, res) => {
         res.status(200).json({ message: 'Autenticacion exitosa', token });
     } catch (error) {
         console.error('Error al autenticar el usuario:', error.message);
-        await logEvent({
-            activity: 'LOGIN_ERROR',
-            ip: req.ip,
-            module: 'LOGIN',
-            status: 'ERROR',
-            detail: error.message
-        });
+
+        const esErrorDeConexion = error.message.includes('ECONNREFUSED') || error.code === 'ECONNREFUSED';
+
+        if (!esErrorDeConexion) {
+            await logEvent({
+                activity: 'LOGIN_ERROR',
+                ip: req.ip,
+                module: 'LOGIN',
+                status: 'ERROR',
+                detail: error.message
+            });
+        }
+
+        if (esErrorDeConexion) {
+            return res.status(503).json({ error: 'El servicio se está iniciando, por favor intenta en unos segundos.' });
+        }
+        
         res.status(500).json({ error: 'Error al autenticar el usuario' });
     }
 };
@@ -182,7 +193,7 @@ const verifyPassword = async (req, res) => {
 
         const { password } = req.body; // La contraseña ya viene hasheada con SHA-256 desde el frontend
 
-        const row = await Login.getLoginByUser(user);
+        const row = await loginModel.getByUser(user);
         if (row.length === 0) {
             return res.status(404).json({ error: 'Usuario o contraseña incorrectos' });
         }
@@ -212,7 +223,7 @@ const updatePassword = async (req, res) => {
         const salt = await bcrypt.genSalt(10); //genera un salt
         const hashedPassword = await bcrypt.hash(password, salt); //genera la constrasena cifrada
 
-        const result = await Login.updatePassword(user, hashedPassword);
+        const result = await loginModel.updatePassword(user, hashedPassword);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
@@ -220,16 +231,16 @@ const updatePassword = async (req, res) => {
 
         if (usernameAccion === user) {
             await logEvent({
-            id_user: idPerfilAccion,
-            user: user,
-            activity: 'PASSWORD_UPDATE',
-            ip: req.ip,
-            module: 'LOGIN',
-            status: 'OK',
-            detail: `El usuario ${user} ha actualizado su contraseña`
-        });
+                id_user: idPerfilAccion,
+                user: user,
+                activity: 'PASSWORD_UPDATE',
+                ip: req.ip,
+                module: 'LOGIN',
+                status: 'OK',
+                detail: `El usuario ${user} ha actualizado su contraseña`
+            });
         }
-        
+
         res.status(200).json({ message: 'Contraseña actualizada con exito' });
     } catch (error) {
         console.error('Error al actualizar la contraseña:', error.message);
@@ -242,7 +253,7 @@ const unlockUser = async (req, res) => {
     const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
-        const result = await Login.unlockUser(user);
+        const result = await loginModel.unlockUser(user);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });

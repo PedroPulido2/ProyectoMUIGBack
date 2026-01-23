@@ -5,12 +5,15 @@ const path = require('path');
 /**
  * Subir una imagen a Google Drive
  * @param {Object} file - Objeto del archivo (req.file)
- * @param {String} idCarpetaDrive - ID de la carpeta en Google Drive
+ * @param {String} fileId - ID del archivo en Google Driv
+ * @param {String} idDriveFolder - ID de la carpeta en Google Drive
  * @param {String} newName - Nuevo nombre para el archivo (sin extensión)
+ * @param {String} oldFolderId - ID de la carpeta antigua (para mover archivos)
+ * @param {String} newFolderId - ID de la nueva carpeta (para mover archivos)
  * @returns {String} - URL de la imagen subida
  */
 
-async function subirImagenADrive(file, idCarpetaDrive, newName) {
+async function uploadFileToDrive(file, idDriveFolder, newName) {
     try {
         const filePath = file.path;
         const originalExtension = path.extname(file.originalname); // Obtener extensión original
@@ -26,7 +29,7 @@ async function subirImagenADrive(file, idCarpetaDrive, newName) {
             requestBody: {
                 name: newFileName,
                 mimeType: file.mimetype,
-                parents: [idCarpetaDrive],
+                parents: [idDriveFolder],
             },
             media: {
                 mimeType: file.mimetype,
@@ -38,22 +41,22 @@ async function subirImagenADrive(file, idCarpetaDrive, newName) {
 
         return `https://drive.google.com/file/d/${response.data.id}`;
     } catch (error) {
-        console.error('Error al subir imagen a Google Drive:', error.message);
-        throw new Error('Error al subir la imagen');
+        console.error('Error al subir archivo a Google Drive:', error.message);
+        throw new Error('Error al subir archivo a Google Drive');
     }
 }
 
-async function eliminarImagenDeDrive(fileId) {
+async function deleteFileToDrive(fileId) {
     try {
         if (!fileId) return;
         await drive.files.delete({ fileId });
     } catch (error) {
-        console.error('Error al eliminar imagen de Google Drive:', error.message);
-        throw new Error('Error al eliminar la imagen');
+        console.error('Error al eliminar archivo de Google Drive:', error.message);
+        throw new Error('Error al eliminar el archivo de Google Drive');
     }
 }
 
-async function actualizarNombreImagenDrive(fileId, newName) {
+async function updateFileNameToDrive(fileId, newName) {
     try {
         // Obtener información del archivo para conservar la extensión original
         const fileMetadata = await drive.files.get({
@@ -75,12 +78,12 @@ async function actualizarNombreImagenDrive(fileId, newName) {
             },
         });
     } catch (error) {
-        console.error('Error al actualizar el nombre de la imagen en Google Drive:', error.message);
-        throw new Error('Error al actualizar el nombre de la imagen');
+        console.error('Error al actualizar el nombre del archivo en Google Drive:', error.message);
+        throw new Error('Error al actualizar el nombre del archivo en Google Drive');
     }
 }
 
-async function moverImagenDrive(fileId, oldFolderId, newFolderId) {
+async function moveFileToDrive(fileId, oldFolderId, newFolderId) {
     try {
         // Quitar la imagen de la carpeta anterior
         await drive.files.update({
@@ -89,14 +92,13 @@ async function moverImagenDrive(fileId, oldFolderId, newFolderId) {
             addParents: newFolderId,
             fields: 'id, parents'
         });
-        console.log(`Imagen ${fileId} movida a la nueva carpeta ${newFolderId}`);
     } catch (error) {
-        console.error('Error al mover la imagen en Google Drive:', error.message);
+        console.error('Error al mover el archivo en Google Drive:', error.message);
         throw new error;
     }
 }
 
-async function protegerArchivoDrive(fileId) {
+async function protectFileInDrive(fileId) {
     try {
         await drive.permissions.create({
             fileId: fileId,
@@ -111,4 +113,39 @@ async function protegerArchivoDrive(fileId) {
     }
 }
 
-module.exports = { subirImagenADrive, eliminarImagenDeDrive, actualizarNombreImagenDrive, moverImagenDrive, protegerArchivoDrive };
+async function searchFileInDrive(fileName, folderId) {
+    try {
+        const query = `name = '${fileName}' and '${folderId}' in parents and trashed = false`;
+        const response = await drive.files.list({
+            q: query,
+            fields: 'files(id, name)',
+            spaces: 'drive',
+        });
+
+        if (response.data.files.length > 0) {
+            return response.data.files[0].id; // Retorna el ID del primer archivo encontrado
+        }
+        return null; // No existe
+    } catch (error) {
+        console.error('Error al buscar archivo en Drive:', error.message);
+        return null;
+    }
+}
+
+async function updateFileContent(fileId, filePath, mimeType) {
+    try {
+        const response = await drive.files.update({
+            fileId: fileId,
+            media: {
+                mimeType: mimeType,
+                body: fs.createReadStream(filePath),
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error al actualizar contenido en Drive:', error.message);
+        throw new Error('Error al actualizar contenido del archivo');
+    }
+}
+
+module.exports = { uploadFileToDrive, deleteFileToDrive, updateFileNameToDrive, moveFileToDrive, protectFileInDrive, searchFileInDrive, updateFileContent };

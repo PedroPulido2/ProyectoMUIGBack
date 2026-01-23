@@ -1,39 +1,39 @@
 require('dotenv').config();
 
-const Fosil = require('../models/fosilModel');
+const fosilModel = require('../models/fossilModel');
 const driveServices = require('../services/driveServices');
-const id_Carpeta_Drive = process.env.ID_CARPETA_DRIVE_FOSIL;
+const fossilDriveFolderId = process.env.ID_CARPETA_DRIVE_FOSIL;
 const { logEvent } = require('../middlewares/logger');
 /**
  * Controlador Fosil
  * En este archivo se definen los controladores asociados al manejo de fosiles, se controlan los errores y solicitudes.
  */
 
-const obtenerFosiles = async (req, res) => {
+const getAllFossils = async (req, res) => {
     try {
-        const fosiles = await Fosil.obtenerTodosLosFosiles();
-        res.status(200).json(fosiles);
+        const fossils = await fosilModel.findAll();
+        res.status(200).json(fossils);
     } catch (error) {
-        console.error('Error al obtener todas los fosiles:', error.message);
+        console.error('Error al obtener los fosiles:', error.message);
         res.status(500).json({ error: 'Error al obtener los fosiles' });
     }
 };
 
-const obtenerFosilPorId = async (req, res) => {
+const getFossilById = async (req, res) => {
     const { ID_FOSIL } = req.params;
     try {
-        const fosil = await Fosil.obtenerFosilPorId(ID_FOSIL);
-        if (fosil.length === 0) {
+        const fossil = await fosilModel.findById(ID_FOSIL);
+        if (fossil.length === 0) {
             return res.status(404).json({ error: 'El ID del fosil no existe' });
         }
-        res.status(200).json(fosil);
+        res.status(200).json(fossil);
     } catch (error) {
-        console.error('Error al obtener todas el fosil:', error.message);
+        console.error('Error al obtener el fosil:', error.message);
         res.status(500).json({ error: 'Error al obtener el fosil' });
     }
 };
 
-const crearFosil = async (req, res) => {
+const createFossil = async (req, res) => {
     var FOTO = '';
 
     const { ID_FOSIL, N_BARRANTES, COLECCION, UBICACION, FILO, SUBFILO, CLASE, ORDEN,
@@ -42,24 +42,24 @@ const crearFosil = async (req, res) => {
 
     try {
         //Verificar si el ID ya existe en la base de datos
-        const fosil = await Fosil.obtenerFosilPorId(ID_FOSIL);
+        const fossil = await fosilModel.findById(ID_FOSIL);
 
         // Si ya existe, devolver un error sin subir la imagen
-        if (fosil.length > 0) {
+        if (fossil.length > 0) {
             return res.status(400).json({ error: 'El ID del fosil ya esta en uso, ingrese uno diferente' });
         }
 
         //Subir imagen a Google Drive si se selecciono una imagen
         if (req.file) {
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_FOSIL);
+            FOTO = await driveServices.uploadFileToDrive(req.file, fossilDriveFolderId, ID_FOSIL);
         }
-        const fosilData = {
+        const fossilData = {
             ID_FOSIL, N_BARRANTES, COLECCION, UBICACION, FILO, SUBFILO, CLASE, ORDEN,
             FAMILIA, GENERO, NOMBRE_FOSIL, PARTES, TIEMPO_GEOLOGICO, COLECTOR, LOCALIDAD,
             VITRINA, BANDEJA, OBSERVACIONES, FOTO
         };
 
-        await Fosil.crearFosil(fosilData);
+        await fosilModel.create(fossilData);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -73,12 +73,12 @@ const crearFosil = async (req, res) => {
 
         res.status(201).json({ message: 'Datos del fosil registrados correctamente' });
     } catch (error) {
-        console.error('Error al crear el fosil:', error.message);
+        console.error('Error al insertar los datos del fosil:', error.message);
         res.status(500).json({ error: 'Error al insertar los datos del fosil' });
     }
 };
 
-const actualizarFosil = async (req, res) => {
+const updateFossil = async (req, res) => {
     var FOTO = '';
 
     const { ID_FOSILPARAM } = req.params;
@@ -87,38 +87,39 @@ const actualizarFosil = async (req, res) => {
         VITRINA, BANDEJA, OBSERVACIONES, idPerfilAccion, usernameAccion } = req.body;
 
     try {
-        const fosil = await Fosil.obtenerFosilPorId(ID_FOSILPARAM);
+        const fossil = await fosilModel.findById(ID_FOSILPARAM);
         //Obtener la imagen actual desde la BD
-        const urlFoto = await Fosil.obtenerFotoFosil(ID_FOSILPARAM);
+        const urlPhoto = await fosilModel.getPhoto(ID_FOSILPARAM);
         let currentFotoUrl = null;
         let currentFileId = null;
 
-        if (fosil.length === 0) {
+        if (fossil.length === 0) {
             return res.status(404).json({ error: `El ID del fósil: ${ID_FOSILPARAM} no fue encontrado u registrado` });
         }
 
-        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
-            currentFotoUrl = urlFoto[0].FOTO;
+        if (urlPhoto.length > 0 && urlPhoto[0].FOTO) {
+            currentFotoUrl = urlPhoto[0].FOTO;
             currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
         }
 
         //Subir imagen a Google Drive si se proporciona un archivo
         if (req.file) {
             if (currentFileId) {
-                await driveServices.eliminarImagenDeDrive(currentFileId);
+                await driveServices.deleteFileToDrive(currentFileId);
             }
-            FOTO = await driveServices.subirImagenADrive(req.file, id_Carpeta_Drive, ID_FOSIL);
+            FOTO = await driveServices.uploadFileToDrive(req.file, fossilDriveFolderId, ID_FOSIL);
         } else {
             FOTO = currentFotoUrl; //Mantener la imagen actual si no se proporciona una nueva
 
             //Si se cambia el ID_FOSIL entonces el nombre del archivo relacionado tambien cambia
             if (ID_FOSIL !== ID_FOSILPARAM) {
-                const fosilExistente = await Fosil.obtenerFosilPorId(ID_FOSIL);
-                if (fosilExistente.length > 0) {
+                const fossilExistente = await fosilModel.findById(ID_FOSIL);
+
+                if (fossilExistente.length > 0) {
                     return res.status(400).json({ error: `El ID_FOSIL: ${ID_FOSIL} ya está en uso` });
                 }
                 if (currentFileId) {
-                    await driveServices.actualizarNombreImagenDrive(currentFileId, ID_FOSIL);
+                    await driveServices.updateFileNameToDrive(currentFileId, ID_FOSIL);
                 }
             }
         }
@@ -129,7 +130,7 @@ const actualizarFosil = async (req, res) => {
             VITRINA, BANDEJA, OBSERVACIONES, FOTO,
         };
 
-        await Fosil.actualizarFosil(ID_FOSILPARAM, fosilData);
+        await fosilModel.update(ID_FOSILPARAM, fosilData);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -148,33 +149,33 @@ const actualizarFosil = async (req, res) => {
     }
 };
 
-const borrarFosil = async (req, res) => {
+const deleteFossil = async (req, res) => {
     const { ID_FOSIL } = req.params;
     const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
         // Verificar si el fósil existe en la base de datos
-        const fosil = await Fosil.obtenerFosilPorId(ID_FOSIL);
-        if (!fosil || fosil.length === 0) {
+        const fossil = await fosilModel.findById(ID_FOSIL);
+        if (!fossil || fossil.length === 0) {
             return res.status(404).json({ error: `El ID del fósil ${ID_FOSIL} no fue encontrado.` });
         }
 
         //Obtener la imagen actual desde la BD
-        const urlFoto = await Fosil.obtenerFotoFosil(ID_FOSIL);
-        let currentFotoUrl = null;
+        const urlPhoto = await fosilModel.getPhoto(ID_FOSIL);
+        let currentUrlPhoto = null;
         let currentFileId = null;
 
-        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
-            currentFotoUrl = urlFoto[0].FOTO;
-            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        if (urlPhoto.length > 0 && urlPhoto[0].FOTO) {
+            currentUrlPhoto = urlPhoto[0].FOTO;
+            currentFileId = currentUrlPhoto.split('/d/')[1]?.split('/')[0] || null;
         }
 
         // Eliminar la imagen de Google Drive
         if (currentFileId) {
-            await driveServices.eliminarImagenDeDrive(currentFileId);
+            await driveServices.deleteFileToDrive(currentFileId);
         }
 
-        await Fosil.eliminarFosil(ID_FOSIL);
+        await fosilModel.delete(ID_FOSIL);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -193,36 +194,36 @@ const borrarFosil = async (req, res) => {
     }
 };
 
-const borrarFotoFosil = async (req, res) => {
+const deleteFossilPhoto = async (req, res) => {
     const { ID_FOSIL } = req.params;
     const { idPerfilAccion, usernameAccion } = req.body;
 
     try {
-        const fosil = await Fosil.obtenerFosilPorId(ID_FOSIL);
+        const fossil = await fosilModel.findById(ID_FOSIL);
         // Obtener la URL de la imagen actual del fósil desde la base de datos
-        const urlFoto = await Fosil.obtenerFotoFosil(ID_FOSIL);
-        let currentFotoUrl = null;
+        const urlPhoto = await fosilModel.getPhoto(ID_FOSIL);
+        let currentUrlPhoto = null;
         let currentFileId = null;
 
-        if (urlFoto.length > 0 && urlFoto[0].FOTO) {
-            currentFotoUrl = urlFoto[0].FOTO;
-            currentFileId = currentFotoUrl.split('/d/')[1]?.split('/')[0] || null;
+        if (urlPhoto.length > 0 && urlPhoto[0].FOTO) {
+            currentUrlPhoto = urlPhoto[0].FOTO;
+            currentFileId = currentUrlPhoto.split('/d/')[1]?.split('/')[0] || null;
         }
 
-        if (fosil.length === 0) {
+        if (fossil.length === 0) {
             return res.status(404).json({ error: `El ID del fósil: ${ID_FOSIL} no fue encontrado` });
         }
 
-        if (!currentFotoUrl) {
+        if (!currentUrlPhoto) {
             return res.status(400).json({ error: 'El fósil no tiene una imagen asociada' });
         }
 
         // Eliminar la imagen de Google Drive
         if (currentFileId) {
-            await driveServices.eliminarImagenDeDrive(currentFileId);
+            await driveServices.deleteFileToDrive(currentFileId);
         }
 
-        await Fosil.eliminarFotoFosil(ID_FOSIL);
+        await fosilModel.deletePhoto(ID_FOSIL);
 
         await logEvent({
             id_user: idPerfilAccion,
@@ -241,4 +242,4 @@ const borrarFotoFosil = async (req, res) => {
     }
 };
 
-module.exports = { obtenerFosiles, obtenerFosilPorId, crearFosil, actualizarFosil, borrarFosil, borrarFotoFosil }
+module.exports = { getAllFossils, getFossilById, createFossil, updateFossil, deleteFossil, deleteFossilPhoto };
