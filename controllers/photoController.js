@@ -5,8 +5,22 @@ const path = require("path");
 const sharp = require("sharp");
 const IMAGE_CACHE_DIR = path.join(__dirname, "cached_images");
 
+const watermarkPath = path.join(__dirname, "../uploads/LogoMUIG.png");
+let watermarkBufferCache = null;
+
+const getWatermarkBuffer = async () => {
+    if (watermarkBufferCache) return watermarkBufferCache;
+    watermarkBufferCache = await sharp(watermarkPath)
+        .resize({ width: 600, fit: "contain" })
+        .toBuffer();
+    return watermarkBufferCache;
+};
+
 const getPhotoWatermark = async (req, res) => {
     const { imageId } = req.params;
+
+    let width = parseInt(req.query.width) || 800;
+    if (width > 1920) width = 1920;
 
     try {
         const imageUrl = `https://drive.google.com/uc?export=view&id=${imageId}`;
@@ -14,45 +28,56 @@ const getPhotoWatermark = async (req, res) => {
         const response = await axios({
             url: imageUrl,
             method: "GET",
-            responseType: "arraybuffer",
+            responseType: "stream",
             headers: {
                 "User-Agent": "Mozilla/5.0",
             },
         });
 
-        // Ruta de tu marca de agua (PNG con transparencia recomendado)
-        const watermarkPath = path.join(__dirname, "../uploads/LogoMUIG.png");
+        let transform;
 
-        // Obtener metadata de la imagen original
-        const base = sharp(response.data);
-        const metadata = await base.metadata();
+        if (width <= 300) {
+            transform = sharp()
+                .resize({
+                    width: width,
+                    withoutEnlargement: true
+                })
+                .jpeg({ quality: 80 });
+        } else {
+            const watermark = await getWatermarkBuffer();
 
-        // Redimensionar watermark en función del ancho de la imagen original
-        const watermarkBuffer = await sharp(watermarkPath)
-            .resize({
-                width: Math.round(metadata.width * 0.5),
-                fit: "contain",
-            })
-            .toBuffer();
-
-        // Usar sharp para poner la marca de agua sobre la imagen
-        const finalImageBuffer = await base
-            .composite([
-                {
-                    input: watermarkBuffer,
-                    gravity: "center",
-                    blend: "over",
-                    opacity: 0.5,
-                },
-            ])
-            .toBuffer();
+            transform = sharp()
+                .resize({
+                    width: width,
+                    withoutEnlargement: true
+                })
+                .composite([
+                    {
+                        input: watermark,
+                        gravity: "center",
+                        blend: "over",
+                        opacity: 0.5,
+                    },
+                ])
+                .jpeg({ quality: 80 });
+        }
 
         res.set("Content-Type", "image/jpeg");
-        res.send(finalImageBuffer);
 
+        response.data
+            .pipe(transform)
+            .pipe(res)
+            .on('error', (err) => {
+                console.error("Error en el procesamiento de imagen:", err.message);
+                // Evitar crashear si el header ya se envió
+                if (!res.headersSent) res.end();
+            });
+        4
     } catch (error) {
-        console.error("Error al descargar la imagen", error.message);
-        res.status(500).json({ error: "No se pudo obtener la imagen." });
+        console.error("Error al descargar la imagen con marca de agua", error.message);
+        if (!res.headersSent) {
+            res.status(500).json({ error: "No se pudo obtener la imagen." });
+        }
     }
 };
 

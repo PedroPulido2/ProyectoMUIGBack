@@ -53,10 +53,12 @@ const createInvestigation = async (req, res) => {
         }
         //Subir imagen a Google Drive
         if (req.file) {
-            if (/^MGUPTC-CPi-HRR-\d{3}$/.test(ID_PIEZA)) {
+            if (/^MGUPTC-CPi-HRR-/.test(ID_PIEZA)) {
                 FOTO = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive_HRR, ID_PIEZA);
-            } else if (/^MGUPTC-CPi-AFPC-\d{4}[A-Za-z]?$/.test(ID_PIEZA)) {
+            } else if (/^MGUPTC-CPi-AFPC-/.test(ID_PIEZA)) {
                 FOTO = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive_AFPC, ID_PIEZA);
+            } else if (/^MGUPTC-CPi-MJGL-/.test(ID_PIEZA)) {
+                FOTO = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive_MJGL, ID_PIEZA);
             } else {
                 FOTO = await driveServices.uploadFileToDrive(req.file, id_Carpeta_Drive_Principal, ID_PIEZA);
             }

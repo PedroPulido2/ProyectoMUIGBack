@@ -161,9 +161,17 @@ const authUser = async (req, res) => {
     } catch (error) {
         console.error('Error al autenticar el usuario:', error.message);
 
-        const esErrorDeConexion = error.message.includes('ECONNREFUSED') || error.code === 'ECONNREFUSED';
+        const esErrorDeConexion =
+            error.message.includes('ECONNREFUSED') ||
+            error.code === 'ECONNREFUSED' ||
+            error.message.includes('Connection lost') ||
+            error.code === 'PROTOCOL_CONNECTION_LOST' ||
+            error.message.includes('ETIMEDOUT') ||
+            error.code === 'ETIMEDOUT' ||
+            error.message.includes('read ECONNRESET') ||
+            error.code === 'ECONNRESET';
 
-        if (!esErrorDeConexion) {
+            if (!esErrorDeConexion) {
             await logEvent({
                 activity: 'LOGIN_ERROR',
                 ip: req.ip,
@@ -174,10 +182,8 @@ const authUser = async (req, res) => {
         }
 
         if (esErrorDeConexion) {
-            return res.status(503).json({ error: 'El servicio se está iniciando, por favor intenta en unos segundos.' });
+            return res.status(503).json({ error: 'El servicio se está iniciando o reconectando, por favor intenta en unos segundos.' });
         }
-        
-        res.status(500).json({ error: 'Error al autenticar el usuario' });
     }
 };
 
