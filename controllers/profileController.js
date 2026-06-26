@@ -267,6 +267,33 @@ const updateProfile = async (req, res) => {
     }
 };
 
+const updatePermissionsProfile = async (req, res) => {
+
+    try {
+        const { id_Perfil } = req.params;
+        const { perm_fosil, perm_mineral, perm_roca, perm_investigacion, perm_perfil, usernameAccion, idPerfilAccion } = req.body;
+
+        const perfilPermissions = { perm_fosil, perm_mineral, perm_roca, perm_investigacion, perm_perfil };
+
+        await profileModel.updatePermissions(id_Perfil, perfilPermissions);
+        res.status(200).json({ message: 'Permisos actualizados correctamente' });
+
+        await logEvent({
+            id_user: idPerfilAccion,
+            user: usernameAccion,
+            activity: 'PROFILE_PERMISSIONS_UPDATE',
+            ip: req.ip,
+            module: 'PERFIL',
+            status: 'OK',
+            detail: `El usuario: ${usernameAccion} actualizó los permisos del perfil: ${id_Perfil}`
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar los permisos:', error.message);
+        res.status(500).json({ error: 'Error al actualizar los permisos' });
+    }
+};
+
 const deleteProfile = async (req, res) => {
     const { id_Perfil } = req.params;
     const { idPerfilAccion, usernameAccion } = req.body;
@@ -407,4 +434,4 @@ const generateHashedPassword = async (password) => {
     return hashedPassword;
 };
 
-module.exports = { getAllProfiles, getProfileById, createProfile, updateProfile, deleteProfile, deleteProfilePhoto, getImageandRolProfile }
+module.exports = { getAllProfiles, getProfileById, createProfile, updateProfile, updatePermissionsProfile, deleteProfile, deleteProfilePhoto, getImageandRolProfile }

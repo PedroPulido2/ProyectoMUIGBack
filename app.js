@@ -22,7 +22,7 @@ var app = express();
 //app.set('view engine', 'jade');
 
 app.use(logger('dev'));
-const allowedOrigins = ['http://localhost', 'http://localhost:3000', 'http://localhost:5173', 'https://muig.up.railway.app',];
+const allowedOrigins = ['http://localhost', 'http://localhost:3000', 'http://localhost:5173', 'https://muig.up.railway.app'];
 
 app.use(cors({
   origin: function (origin, callback) {

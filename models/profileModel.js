@@ -8,12 +8,12 @@ const db = require('../config/bd');
 
 const ProfileModel = {
     async getAll() {
-        const [rows] = await db.query('SELECT id_Perfil AS ID_PERFIL, user AS USER, tipoIdentificacion AS TIPO_IDENTIFICACION, nombre AS NOMBRE, apellido AS APELLIDO, fechaNacimiento AS FECHA_NACIMIENTO, genero AS GENERO, correo AS CORREO, telefono AS TELEFONO, foto AS FOTO, fechaCreacion AS FECHA_CREACION, isAdmin AS IS_ADMIN, estado AS ESTADO FROM login INNER JOIN perfil USING(id_perfil)');
+        const [rows] = await db.query('SELECT id_Perfil AS ID_PERFIL, user AS USER, nombre AS NOMBRE, apellido AS APELLIDO, genero AS GENERO, foto AS FOTO, isAdmin AS IS_ADMIN, estado AS ESTADO FROM login INNER JOIN perfil USING(id_perfil)');
         return rows;
     },
 
     async getById(id_Perfil) {
-        const [rows] = await db.query('SELECT * FROM perfil WHERE id_Perfil = ?', [id_Perfil]);
+        const [rows] = await db.query('SELECT id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, foto, fechaCreacion, isAdmin, perm_fosil, perm_mineral, perm_roca, perm_investigacion, perm_perfil, estado FROM perfil INNER JOIN login USING (id_perfil) WHERE id_Perfil = ?', [id_Perfil]);
         return rows;
     },
 
@@ -27,12 +27,26 @@ const ProfileModel = {
     },
 
     async update(id_PerfilPARAM, data) {
-        const { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, foto, isAdmin, } = data;
+        const { id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, foto, isAdmin } = data;
 
-        const query = 'UPDATE perfil SET id_Perfil = ?, tipoIdentificacion = ?, nombre = ?, apellido = ?, fechaNacimiento = ?, genero = ?, correo = ?, telefono = ?, foto = ?, isAdmin = ? WHERE id_Perfil = ?';
+        const query = `UPDATE perfil SET 
+            id_Perfil = ?, tipoIdentificacion = ?, nombre = ?, apellido = ?, 
+            fechaNacimiento = ?, genero = ?, correo = ?, telefono = ?, foto = ?, isAdmin = ?
+            WHERE id_Perfil = ?`;
 
-        const [result] = await db.query(query, [id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento, genero, correo, telefono, foto, isAdmin, id_PerfilPARAM]);
-        return result;
+        const [result] = await db.query(query, [
+            id_Perfil, tipoIdentificacion, nombre, apellido, fechaNacimiento,
+            genero, correo, telefono, foto, isAdmin,
+            id_PerfilPARAM
+        ]);
+    },
+
+    async updatePermissions(id_Perfil, data) {
+        const { perm_fosil, perm_mineral, perm_roca, perm_investigacion, perm_perfil } = data;
+        const query = `UPDATE perfil SET 
+            perm_fosil = ?, perm_mineral = ?, perm_roca = ?, perm_investigacion = ?, perm_perfil = ?
+            WHERE id_Perfil = ?`;
+        const [result] = await db.query(query, [perm_fosil, perm_mineral, perm_roca, perm_investigacion, perm_perfil, id_Perfil]);
     },
 
     async delete(id_Perfil) {

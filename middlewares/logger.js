@@ -7,6 +7,37 @@ const path = require("path");
 const logDir = "./logs";
 const logFile = path.join(logDir, "system.log");
 
+const restoreLogFromDrive = async () => {
+  try {
+    await fs.ensureDir(logDir);
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const fileName = `system_${timestamp}.log`;
+    const folderId = process.env.ID_CARPETA_DRIVE_LOG;
+
+    console.log("Comprobando si existe un log de hoy en Drive tras el reinicio...");
+    const existingFileId = await driveServices.searchFileInDrive(fileName, folderId);
+
+    if (existingFileId) {
+      console.log(`Log encontrado en Drive. Descargando y restaurando localmente...`);
+      await driveServices.downloadFileFromDrive(existingFileId, logFile);
+      console.log("Log local restaurado exitosamente.");
+    } else {
+      console.log("No hay log en Drive para hoy. Iniciando archivo nuevo.");
+      if (!fs.existsSync(logFile)) {
+        await fs.writeFile(logFile, "");
+      }
+    }
+  } catch (error) {
+    console.error("Error al intentar restaurar el log desde Drive:", error.message);
+    if (!fs.existsSync(logFile)) {
+      fs.writeFileSync(logFile, "");
+    }
+  }
+};
+
+restoreLogFromDrive();
+
 const logEvent = async (data) => {
   try {
     await fs.ensureDir(logDir);
@@ -117,4 +148,4 @@ module.exports = { logEvent, getLogs, uploadLogToDrive, uploadLog };
 
 setInterval(() => {
   uploadLogToDrive();
-}, 600000); // 10 minutos (10 * 60 * 1000)
+}, 60000); // 10 minutos (10 * 60 * 1000)

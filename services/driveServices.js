@@ -148,4 +148,27 @@ async function updateFileContent(fileId, filePath, mimeType) {
     }
 }
 
-module.exports = { uploadFileToDrive, deleteFileToDrive, updateFileNameToDrive, moveFileToDrive, protectFileInDrive, searchFileInDrive, updateFileContent };
+const downloadFileFromDrive = async (fileId, destPath) => {
+    try {
+        const response = await drive.files.get(
+            { fileId: fileId, alt: 'media' },
+            { responseType: 'stream' }
+        );
+
+        return new Promise((resolve, reject) => {
+            const dest = fs.createWriteStream(destPath);
+            response.data
+                .on('end', () => resolve(true))
+                .on('error', err => {
+                    console.error('Error al descargar:', err);
+                    reject(err);
+                })
+                .pipe(dest);
+        });
+    } catch (error) {
+        console.error("Error conectando con Drive para descargar:", error.message);
+        throw error;
+    }
+};
+
+module.exports = { uploadFileToDrive, deleteFileToDrive, updateFileNameToDrive, moveFileToDrive, protectFileInDrive, searchFileInDrive, updateFileContent, downloadFileFromDrive };

@@ -31,7 +31,7 @@ const LoginModel = {
     },
 
     async getByUser(user) {
-        const [row] = await db.query('SELECT login.id_Perfil, user , password, isAdmin, foto, estado, intentos_fallidos FROM login INNER JOIN perfil USING (id_Perfil) WHERE user = ?', [user]);
+        const [row] = await db.query('SELECT login.id_Perfil, user , password, isAdmin, foto, estado, intentos_fallidos, perm_fosil, perm_mineral, perm_roca, perm_investigacion, perm_perfil FROM login INNER JOIN perfil USING (id_Perfil) WHERE user = ?', [user]);
         return row;
     },
 
@@ -66,14 +66,14 @@ const LoginModel = {
         return result;
     },
 
-    async unlockUser(user){
+    async unlockUser(user) {
         const [result] = await db.query(`UPDATE login SET estado = 'ACTIVO', intentos_fallidos = 0 WHERE user = ?`,
             [user]
         );
         return result;
     },
 
-    async blockuser(user){
+    async blockuser(user) {
         const [result] = await db.query(`UPDATE login SET estado = 'BLOQUEADO' WHERE user = ?`,
             [user]
         );

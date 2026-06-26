@@ -142,7 +142,7 @@ const authUser = async (req, res) => {
 
         // Generar el token JWT
         const token = jwt.sign(
-            { id_Perfil: userData.id_Perfil, user: userData.user, isAdmin: userData.isAdmin, foto: userData.foto },
+            { id_Perfil: userData.id_Perfil, user: userData.user, isAdmin: userData.isAdmin, foto: userData.foto, perm_fosil: userData.perm_fosil, perm_mineral: userData.perm_mineral, perm_roca: userData.perm_roca, perm_investigacion: userData.perm_investigacion, perm_perfil: userData.perm_perfil },
             process.env.SECRET_KEY,
             { expiresIn: "1h" }
         );
@@ -171,7 +171,7 @@ const authUser = async (req, res) => {
             error.message.includes('read ECONNRESET') ||
             error.code === 'ECONNRESET';
 
-            if (!esErrorDeConexion) {
+        if (!esErrorDeConexion) {
             await logEvent({
                 activity: 'LOGIN_ERROR',
                 ip: req.ip,
