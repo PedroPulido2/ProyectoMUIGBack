@@ -8,7 +8,7 @@ const db = require('../config/bd');
 
 const ProfileModel = {
     async getAll() {
-        const [rows] = await db.query('SELECT id_Perfil AS ID_PERFIL, user AS USER, nombre AS NOMBRE, apellido AS APELLIDO, genero AS GENERO, foto AS FOTO, isAdmin AS IS_ADMIN, estado AS ESTADO FROM login INNER JOIN perfil USING(id_perfil)');
+        const [rows] = await db.query('SELECT id_Perfil AS ID_PERFIL, nombre AS NOMBRE, apellido AS APELLIDO, genero AS GENERO, foto AS FOTO, isAdmin AS IS_ADMIN, estado AS ESTADO FROM login INNER JOIN perfil USING(id_perfil)');
         return rows;
     },
 
