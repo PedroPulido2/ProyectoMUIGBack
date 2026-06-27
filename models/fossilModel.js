@@ -10,6 +10,34 @@ const FosilModel = {
         return rows;
     },
 
+    async getPaginated(limit, offset, searchColumn, searchTerm) {
+        let query = 'SELECT * FROM fosil';
+        let countQuery = 'SELECT COUNT(*) as count FROM fosil';
+        const queryParams = [];
+        const countParams = [];
+
+        if (searchTerm && searchColumn) {
+            query += ' WHERE ?? LIKE ?';
+            countQuery += ' WHERE ?? LIKE ?';
+
+            const searchValue = `%${searchTerm}%`; // El % hace que busque coincidencias parciales
+
+            queryParams.push(searchColumn, searchValue);
+            countParams.push(searchColumn, searchValue);
+        }
+
+        query += ' LIMIT ? OFFSET ?';
+        queryParams.push(limit, offset);
+
+        const [rows] = await db.query(query, queryParams);
+        const [totalRows] = await db.query(countQuery, countParams);
+
+        return {
+            data: rows,
+            total: totalRows[0].count
+        };
+    },
+
     async findById(ID_FOSIL) {
         const [row] = await db.query('SELECT * FROM fosil WHERE ID_FOSIL = ?', [ID_FOSIL]);
         return row;

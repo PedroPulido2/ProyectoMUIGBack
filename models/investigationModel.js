@@ -11,6 +11,34 @@ const InvestigationModel = {
         return rows;
     },
 
+    async getPaginated(limit, offset, searchColumn, searchTerm) {
+        let query = 'SELECT * FROM investigacion';
+        let countQuery = 'SELECT COUNT(*) as count FROM investigacion';
+        const queryParams = [];
+        const countParams = [];
+
+        if (searchTerm && searchColumn) {
+            query += ' WHERE ?? LIKE ?';
+            countQuery += ' WHERE ?? LIKE ?';
+
+            const searchValue = `%${searchTerm}%`; // El % hace que busque coincidencias parciales
+
+            queryParams.push(searchColumn, searchValue);
+            countParams.push(searchColumn, searchValue);
+        }
+
+        query += ' LIMIT ? OFFSET ?';
+        queryParams.push(limit, offset);
+
+        const [rows] = await db.query(query, queryParams);
+        const [totalRows] = await db.query(countQuery, countParams);
+
+        return {
+            data: rows,
+            total: totalRows[0].count
+        };
+    },
+
     async findById(ID_PIEZA) {
         const [row] = await db.query('SELECT * FROM investigacion WHERE ID_PIEZA = ?', [ID_PIEZA]);
         return row;

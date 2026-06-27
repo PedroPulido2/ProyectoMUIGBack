@@ -12,8 +12,24 @@ const { logEvent } = require('../middlewares/logger');
 
 const getAllRocks = async (req, res) => {
     try {
-        const rocas = await rocaModel.findAll();
-        res.status(200).json(rocas);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const searchColumn = req.query.searchColumn || null;
+        const searchTerm = req.query.searchTerm || null;
+
+        const offset = (page - 1) * limit;
+
+        const result = await rocaModel.getPaginated(limit, offset, searchColumn, searchTerm);
+
+        const totalPages = Math.ceil(result.total / limit);
+
+        res.status(200).json({
+            data: result.data,
+            currentPage: page,
+            totalPages: totalPages,
+            totalRecords: result.total
+        });
     } catch (error) {
         console.error('Error al obtener todas las rocas:', error.message);
         res.status(500).json({ error: 'Error al obtener las rocas' });
