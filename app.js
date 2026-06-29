@@ -14,6 +14,7 @@ const rocaRouter = require('./routes/rockRoutes');
 const perfilRouter = require('./routes/profileRoutes');
 const imagenRouter = require('./routes/photoRoutes');
 const logRoutes = require('./routes/logRoutes');
+const customModuloRouter = require('./routes/customModuloRoutes');
 
 var app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/perfil', perfilRouter);
 app.use('/api/imagen', imagenRouter);
 
 app.use("/api/logs", logRoutes);
+app.use('/api/custom-modulo', customModuloRouter);
 
 // Cualquier ruta que no sea API devuelve el index.html de React
 app.get('*', (req, res) => {

@@ -66,12 +66,55 @@ const logEvent = async (data) => {
 
 const getLogs = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const searchColumn = req.query.searchColumn ? req.query.searchColumn.toUpperCase() : null;
+    const searchTerm = req.query.searchTerm ? req.query.searchTerm.toLowerCase().trim() : "";
+
+    if (!fs.existsSync("./logs/system.log")) {
+      return res.status(200).json({ data: [], currentPage: 1, totalPages: 1 });
+    }
+
     const data = fs.readFileSync("./logs/system.log", "utf8").split("\n").filter(Boolean);
-    const logs = data.map(line => JSON.parse(decrypt(line)));
-    res.status(200).json(logs);
+
+    let logs = data.map(line => {
+      try {
+        return JSON.parse(decrypt(line));
+      } catch (e) {
+        return null;
+      }
+    }).filter(Boolean);
+
+    if (searchTerm && searchColumn) {
+      logs = logs.filter(log => {
+        const valueValue = log[searchColumn];
+        if (valueValue === undefined || valueValue === null) return false;
+
+        return String(valueValue).toLowerCase().includes(searchTerm);
+      });
+    }
+
+    logs.sort((a, b) => new Date(b.DATE) - new Date(a.DATE));
+
+    const totalRecords = logs.length;
+    const totalPages = Math.ceil(totalRecords / limit) || 1;
+
+    const safePage = Math.max(1, Math.min(page, totalPages));
+    const startIndex = (safePage - 1) * limit;
+    const endIndex = startIndex + limit;
+
+    const paginatedLogs = logs.slice(startIndex, endIndex);
+
+    res.status(200).json({
+      data: paginatedLogs,
+      currentPage: safePage,
+      totalPages: totalPages,
+      totalRecords: totalRecords
+    });
+
   } catch (error) {
-    console.error("Error al leer logs:", error.message);
-    res.status(500).json({ error: "No se pudieron leer los logs" });
+    console.error("Error al procesar y paginar logs:", error.message);
+    res.status(500).json({ error: "No se pudieron procesar los logs del sistema" });
   }
 };
 
