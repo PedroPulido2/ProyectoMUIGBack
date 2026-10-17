@@ -259,7 +259,7 @@ const updateProfile = async (req, res) => {
         res.status(200).json({ message: 'Datos del perfil fueron actualizados correctamente' });
 
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ error: `El usuario ya está en uso` });
         }
         console.error('Error al actualizar el perfil:', error.message);

@@ -60,7 +60,7 @@ const createLogin = async (req, res) => {
         await loginModel.create(user, hashedPassword, id_Perfil);
         res.status(201).json({ message: 'El usuario fue registrado con exito' });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ error: 'El nombre de usuario ya esta en uso' });
         }
         console.error('Error al crear el usuario:', error.message);
@@ -80,7 +80,7 @@ const updateLogin = async (req, res) => {
 
         const result = await loginModel.updateLogin(user, hashedPassword, id_Perfil, userParam);
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
         }
         res.status(200).json({ message: 'El usuario fue actualizado con exito' });
@@ -95,7 +95,7 @@ const deleteLogin = async (req, res) => {
     try {
         const result = await loginModel.delete(user);
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'El usuario no fue encontrado' });
         }
         res.status(200).json({ message: 'El usuario fue eliminado correctamente' });
@@ -169,7 +169,10 @@ const authUser = async (req, res) => {
             error.message.includes('ETIMEDOUT') ||
             error.code === 'ETIMEDOUT' ||
             error.message.includes('read ECONNRESET') ||
-            error.code === 'ECONNRESET';
+            error.code === 'ECONNRESET' ||
+            error.code === '08006' || // PG: connection failure
+            error.code === '08001' || // PG: unable to connect
+            error.code === '57P01'; // PG: admin shutdown
 
         if (!esErrorDeConexion) {
             await logEvent({
@@ -231,7 +234,7 @@ const updatePassword = async (req, res) => {
 
         const result = await loginModel.updatePassword(user, hashedPassword);
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado u registrado' });
         }
 
@@ -261,7 +264,7 @@ const unlockUser = async (req, res) => {
     try {
         const result = await loginModel.unlockUser(user);
 
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
         await logEvent({

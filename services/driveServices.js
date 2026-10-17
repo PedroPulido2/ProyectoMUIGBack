@@ -35,6 +35,13 @@ async function uploadFileToDrive(file, idDriveFolder, newName) {
                 mimeType: file.mimetype,
                 body: fs.createReadStream(newFilePath), // Aquí se usa newFilePath
             },
+        }).catch(async (err) => {
+            // Si la subida falla, no dejar el archivo renombrado huerfano en uploads/
+            try {
+                if (fs.existsSync(newFilePath)) fs.unlinkSync(newFilePath);
+                else if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            } catch { /* no op */ }
+            throw err;
         });
 
         fs.unlinkSync(newFilePath); // Eliminar archivo temporal del servidor
@@ -157,8 +164,14 @@ const downloadFileFromDrive = async (fileId, destPath) => {
 
         return new Promise((resolve, reject) => {
             const dest = fs.createWriteStream(destPath);
+            // Resolver en 'finish' del archivo en disco (no en 'end' del
+            // readable) para evitar leer un archivo aun sin vaciar.
+            dest.on('finish', () => resolve(true));
+            dest.on('error', err => {
+                console.error('Error al descargar:', err);
+                reject(err);
+            });
             response.data
-                .on('end', () => resolve(true))
                 .on('error', err => {
                     console.error('Error al descargar:', err);
                     reject(err);
