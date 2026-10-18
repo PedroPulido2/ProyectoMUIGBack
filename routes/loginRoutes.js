@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const loginController = require('../controllers/loginController');
+const passwordResetController = require('../controllers/passwordResetController');
 const auth = require('../middlewares/auth');
 
 //Rutas del login
@@ -14,5 +15,7 @@ router.post('/auth', loginController.authUser);
 router.post('/verify', loginController.verifyPassword);
 router.post('/logout/:user', auth, loginController.logoutUser);
 router.post('/unlock/:user', auth, loginController.unlockUser);
+router.post('/forgot-password', passwordResetController.forgotPassword);
+router.post('/reset-password', passwordResetController.resetPassword);
 
 module.exports = router;

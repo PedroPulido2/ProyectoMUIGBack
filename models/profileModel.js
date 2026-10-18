@@ -63,6 +63,48 @@ const ProfileModel = {
     async getImage(id_Perfil) {
         const { rows } = await db.query('SELECT "foto" FROM perfil WHERE "id_Perfil" = $1', [id_Perfil]);
         return rows;
+    },
+
+    async getByCorreo(correo) {
+        const { rows } = await db.query(
+            'SELECT "id_Perfil", "correo", "nombre" FROM perfil WHERE LOWER("correo") = LOWER($1)',
+            [correo]
+        );
+        return rows;
+    },
+
+    async saveResetToken(id_Perfil, tokenHash) {
+        // La expiración se calcula en la BD para evitar desfases de reloj del servidor de la app.
+        const result = await db.query(
+            'UPDATE perfil SET "reset_token_hash" = $1, "reset_token_expires_at" = NOW() + INTERVAL \'1 hour\' WHERE "id_Perfil" = $2',
+            [tokenHash, id_Perfil]
+        );
+        return result;
+    },
+
+    async getByResetHash(tokenHash) {
+        const { rows } = await db.query(
+            'SELECT "id_Perfil", "correo", "reset_token_expires_at" FROM perfil WHERE "reset_token_hash" = $1 AND "reset_token_expires_at" > NOW()',
+            [tokenHash]
+        );
+        return rows;
+    },
+
+    async getResetRowByHash(tokenHash) {
+        // Solo para diagnóstico en logs del servidor (no expone nada al cliente).
+        const { rows } = await db.query(
+            'SELECT "id_Perfil", "reset_token_expires_at" FROM perfil WHERE "reset_token_hash" = $1',
+            [tokenHash]
+        );
+        return rows;
+    },
+
+    async clearResetToken(id_Perfil) {
+        const result = await db.query(
+            'UPDATE perfil SET "reset_token_hash" = NULL, "reset_token_expires_at" = NULL WHERE "id_Perfil" = $1',
+            [id_Perfil]
+        );
+        return result;
     }
 };
 
