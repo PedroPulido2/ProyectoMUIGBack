@@ -90,7 +90,12 @@ const forgotPassword = async (req, res) => {
         }
 
         try {
-            await sendPasswordResetEmail(perfil.correo, buildResetLink(plainToken));
+            let username = perfil.user;
+            if (!username) {
+                const loginRows = await loginModel.getByIdPerfil(perfil.id_Perfil);
+                if (loginRows.length > 0) username = loginRows[0].user;
+            }
+            await sendPasswordResetEmail(perfil.correo, buildResetLink(plainToken), username);
         } catch (mailError) {
             console.error('Error al enviar correo de recuperación:', mailError.message);
             await profileModel.clearResetToken(perfil.id_Perfil);

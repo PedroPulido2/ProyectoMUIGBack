@@ -67,7 +67,7 @@ const ProfileModel = {
 
     async getByCorreo(correo) {
         const { rows } = await db.query(
-            'SELECT "id_Perfil", "correo", "nombre" FROM perfil WHERE LOWER("correo") = LOWER($1)',
+            'SELECT perfil."id_Perfil", perfil."correo", perfil."nombre", login."user" FROM perfil LEFT JOIN login ON login."id_Perfil" = perfil."id_Perfil" WHERE LOWER(perfil."correo") = LOWER($1)',
             [correo]
         );
         return rows;

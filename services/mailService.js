@@ -29,8 +29,9 @@ function getTransporter() {
     return transporter;
 }
 
-async function sendPasswordResetEmail(correo, resetLink) {
+async function sendPasswordResetEmail(correo, resetLink, username) {
     const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+    const safeUser = username || 'No disponible';
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -60,6 +61,10 @@ async function sendPasswordResetEmail(correo, resetLink) {
                   <h2 style="margin-top: 0; color: #1a1a1a; font-size: 20px; font-weight: 600;">Restablecimiento de Contraseña</h2>
                   <p style="margin: 15px 0; color: #555555; font-size: 15px;">
                     Hemos recibido una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el siguiente botón para continuar:
+                  </p>
+
+                  <p style="margin: 15px 0; color: #333333; font-size: 15px;">
+                    Su usuario: <strong>${safeUser}</strong>
                   </p>
                   
                   <!-- Botón de acción principal -->
@@ -107,7 +112,7 @@ async function sendPasswordResetEmail(correo, resetLink) {
         from: `"MUIG UPTC" <${from}>`,
         to: correo,
         subject: 'Recuperación de contraseña — MUIG',
-        text: `Solicitaste recuperar tu contraseña.\n\nUsa este enlace (válido por 1 hora, un solo uso):\n${resetLink}\n\nSi no fuiste tú, ignora este correo.`,
+        text: `Solicitaste recuperar tu contraseña.\n\nSu usuario: ${safeUser}\n\nUsa este enlace (válido por 1 hora, un solo uso):\n${resetLink}\n\nSi no fuiste tú, ignora este correo.`,
         html: htmlContent
     };
 
